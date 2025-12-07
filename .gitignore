@@ -1,0 +1,202 @@
+
+############################################################
+# 🔵 GLOBAL OS & EDITOR ARTIFACTS
+############################################################
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Backup / Temp Files
+*.swp
+*.swo
+*.tmp
+*.temp
+*.bak
+*~
+
+############################################################
+# 🔵 GLOBAL ENV / SECRETS  (VERY IMPORTANT)
+############################################################
+
+.env
+.env.*
+*.key
+*.pem
+*.crt
+*.token
+*.secret
+
+############################################################
+# 🔵 LOG FILES
+############################################################
+
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+############################################################
+# 🔵 GLOBAL BUILD / OUTPUT / CACHE DIRECTORIES
+############################################################
+
+dist/
+build/
+out/
+tmp/
+temp/
+.cache/
+.cache-loader/
+coverage/
+reports/
+generated/
+
+############################################################
+# 🔵 IDE / EDITOR CONFIG
+############################################################
+
+# VS Code
+.vscode/
+
+# JetBrains / IntelliJ / WebStorm / PyCharm
+.idea/
+*.iml
+
+# Eclipse
+.project
+.classpath
+.settings/
+
+############################################################
+# 🦀 RUST
+############################################################
+
+target/
+Cargo.lock  # keep only if building executable apps, otherwise ignore
+
+############################################################
+# 🐹 GO
+############################################################
+
+# Go build outputs
+bin/
+build/
+*.exe
+*.test
+*.out
+
+# Go modules cache (global)
+pkg/
+
+############################################################
+# ☕ JAVA / JVM ECOSYSTEM
+############################################################
+
+# Maven
+target/
+
+# Gradle
+.gradle/
+build/
+
+# Java compiled
+*.class
+*.jar
+*.war
+*.ear
+
+############################################################
+# 🟦 JAVASCRIPT / TYPESCRIPT
+############################################################
+
+# node
+node_modules/
+
+# lockfiles (optional)
+yarn.lock
+pnpm-lock.yaml
+
+# TS
+*.tsbuildinfo
+
+# build output
+dist/
+build/
+
+############################################################
+# ⚛️ FRONTEND: REACT / VUE / NEXT / NUXT / VITE / SVELTE
+############################################################
+
+# Next.js
+.next/
+out/
+
+# Nuxt
+.nuxt/
+
+# Vercel
+.vercel/
+
+# Vue
+.vue-cache/
+
+# SvelteKit
+.svelte-kit/
+
+# Vite
+.vite/
+
+# Webpack cache
+.webpack/
+
+############################################################
+# 🐳 DOCKER
+############################################################
+
+.docker/
+docker-compose.override.yml
+
+############################################################
+# ☸️ KUBERNETES (k8s)
+############################################################
+
+k8s/generated/
+*.kubeconfig
+
+############################################################
+# 🐍 PYTHON (just in case)
+############################################################
+
+__pycache__/
+*.pyc
+.venv/
+env/
+venv/
+
+############################################################
+# 🐘 DATABASES / DATA FILES
+############################################################
+
+*.sqlite
+*.db
+*.sql
+*.dump
+
+############################################################
+# 🔧 MISC BUILD TOOLS / LANGUAGES
+############################################################
+
+# Make
+*.d
+
+# C / C++ build artifacts
+*.o
+*.obj
+*.so
+*.dll
+*.a
+*.out
+
+# Shell scripts crated backups
+*.sh~
+
