@@ -1,11 +1,14 @@
+mod closures;
+mod concurrency;
 mod enums;
 mod errors;
 mod generics;
+mod iterators;
 mod maps;
 mod slices;
+mod smart_pointers;
 mod traits;
 mod vector;
-
 // fn _vector(){
 // let num_list: Vec<i32> = vec![1,2,3];
 //   let result = vector::sum_arr(&num_list);
@@ -21,8 +24,10 @@ mod vector;
 use std::env;
 use std::path::{Path, PathBuf};
 
-use crate::maps::learn_maps;
-use crate::slices::first_word;
+// use crate::maps::learn_maps;
+// use crate::slices::first_word;
+// use crate::smart_pointers::list;
+use crate::concurrency::channels_mpsc;
 
 fn check_path() {
     // Get current working directory
@@ -64,8 +69,12 @@ fn check_path() {
 fn main() {
     // check_path();
     // learn_maps();
-    let s = first_word("A boy");
-    println!("{s}")
+    // let s = first_word("A boy");
+    // println!("{s}")
+    // list();
+    // channels();
+    channels_mpsc();
+    concurrency::run_mutexes()
 
     // Note: if you want `?` for early return, main must return Result<(), Box<dyn Error>>
 }
