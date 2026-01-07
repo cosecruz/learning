@@ -1,4 +1,4 @@
-use master_concurrency::{part_a, thread_pool};
+use master_concurrency::{atomic, channels, part_a, thread_pool};
 
 struct TryFn<T> {
     f: fn(&T) -> T, //does not mutate captured values and can be used many times: Fn
@@ -17,5 +17,14 @@ fn main() {
     // part_a::state();
     //     part_a::state_chan();
     // part_a::rw();
-    part_a::pk_lot_mutex();
+    // part_a::pk_lot_mutex();
+    // atomic::basic();
+    // atomic::compare();
+    // channels::basic_mpsc();
+    // channels::basic_mpsc_recv();
+    // channels::worker_pool(3, None);
+    // let results = channels::worker_pool_with_results(3, vec![1, 2, 3, 4, 5], |x| x * 2);
+    let results = channels::worker_pool_with_beam_results(3, vec![1, 2, 3, 4, 5], |x| x * 2);
+
+    println!("results: {:?}", results);
 }
