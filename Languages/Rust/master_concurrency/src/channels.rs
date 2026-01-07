@@ -174,11 +174,109 @@ where
 }
 
 //producer-consumer(streaming)
+//single producer and single consumer
+pub fn spsc() {
+    let (tx, rx) = mpsc::channel::<i32>();
+
+    //producer
+    let producer = thread::spawn(move || {
+        for n in 0..5 {
+            println!("produced {}", n);
+            tx.send(n).unwrap();
+        }
+    });
+    //consumer
+    let consumer = thread::spawn(move || {
+        while let Ok(job) = rx.recv() {
+            println!("consumed {}", job);
+        }
+        println!("consumer done")
+    });
+
+    producer.join().unwrap();
+    consumer.join().unwrap();
+}
+//single producer and multiple consumer fails
+pub fn spmc() {
+    let (tx, rx) = channel::unbounded::<i32>();
+
+    // spawn consumers first
+    let mut consumers = vec![];
+    for i in 0..2 {
+        let rx = rx.clone();
+        consumers.push(thread::spawn(move || {
+            while let Ok(msg) = rx.recv() {
+                println!("consumer {} got {}", i, msg);
+            }
+            println!("consumer {} done", i);
+        }));
+    }
+
+    // producer
+    let producer = thread::spawn(move || {
+        for n in 1..=5 {
+            println!("produced {}", n);
+            tx.send(n).unwrap();
+        }
+        // tx dropped here → channel closes
+    });
+
+    producer.join().unwrap();
+
+    // wait for consumers
+    for c in consumers {
+        c.join().unwrap();
+    }
+}
+
+//multi producer multi consumer with crossbeam
+pub fn mpmc() {
+    let (tx, rx) = channel::bounded(5);
+
+    // producers
+    for id in 0..2 {
+        let tx = tx.clone();
+        thread::spawn(move || {
+            for n in 0..5 {
+                tx.send((id, n)).unwrap();
+            }
+        });
+    }
+
+    // consumers
+    for id in 0..3 {
+        let rx = rx.clone();
+        thread::spawn(move || {
+            while let Ok(msg) = rx.recv() {
+                println!("consumer {} got {:?}", id, msg);
+            }
+        });
+    }
+
+    drop(tx); // close channel
+}
+
 //pipelines(multi stage processing)
+
 //shared state
-//lock free atomic states
+//atomic and message passing(lock free)
 //(work stealing)load balancing
 //safe cancellation and shutdown- no leaks
 //scoped concurrency
-//back pressure
+
+//back pressure strategies:
+//  bounded channel(block)
+//  drop message
+// sample/aggregators
+// dynamic rate limiting
+//  timeouts
+//  select
+
 //coordination (barrriers and latches)
+
+//actor model impl
+//  basic impl
+// actor with handle
+//  actor system with supervision
+
+//for what is not written here check obsidian notes

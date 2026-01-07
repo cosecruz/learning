@@ -24,7 +24,9 @@ fn main() {
     // channels::basic_mpsc_recv();
     // channels::worker_pool(3, None);
     // let results = channels::worker_pool_with_results(3, vec![1, 2, 3, 4, 5], |x| x * 2);
-    let results = channels::worker_pool_with_beam_results(3, vec![1, 2, 3, 4, 5], |x| x * 2);
+    // let results = channels::worker_pool_with_beam_results(3, vec![1, 2, 3, 4, 5], |x| x * 2);
 
-    println!("results: {:?}", results);
+    // println!("results: {:?}", results);
+
+    channels::spmc();
 }
