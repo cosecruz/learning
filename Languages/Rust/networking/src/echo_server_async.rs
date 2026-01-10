@@ -25,3 +25,16 @@ async fn handle_client(mut stream: TcpStream) -> Result<(), Box<dyn std::error::
         stream.write_all(&buf[..n]).await?;
     }
 }
+
+// use tokio::io::{AsyncWriteExt, AsyncReadExt};
+// use tokio::net::TcpStream;
+
+// #[tokio::main]
+// async fn main() {
+//     let mut stream = TcpStream::connect("127.0.0.1:8080").await.unwrap();
+//     stream.write_all(b"hello\n").await.unwrap();
+
+//     let mut buf = vec![0; 64];
+//     let n = stream.read(&mut buf).await.unwrap();
+//     println!("{}", String::from_utf8_lossy(&buf[..n]));
+// }
