@@ -1,4 +1,5 @@
 use axum::Router;
+use axum::response::Html;
 use axum::routing::{get, get_service};
 
 /// Builds the API router for version 1 (`/v1`).
@@ -31,5 +32,8 @@ pub(super) fn v1_router() -> Router {
     println!("path: {}", todo_path);
     Router::new()
         // path: '/todos'
-        .route(&todo_path, get(|| async { "get" }))
+        .route(
+            &todo_path,
+            get(|| async { Html("Hello <strong>Verb</strong>") }),
+        )
 }

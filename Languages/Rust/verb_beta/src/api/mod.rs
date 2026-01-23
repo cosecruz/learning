@@ -74,6 +74,8 @@
 //! This module exposes only routing and HTTP concerns.
 //! Business logic lives in the domain layer.
 
+use std::net::SocketAddr;
+
 use axum::routing::get;
 use axum::{Router, serve};
 
@@ -89,9 +91,10 @@ pub(super) async fn serve_api() {
     //a router needs routes, handlers, middleware and other dependency
     let app = router();
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.0:8080")
-        .await
-        .unwrap();
+    let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
+
+    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
+    println!("->> [SERVER] LISTENING on {addr}\n");
 
     serve(listener, app).await.unwrap();
 }
