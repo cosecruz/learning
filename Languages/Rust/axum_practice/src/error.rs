@@ -3,10 +3,14 @@ use std::fmt;
 
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
+use serde::Serialize;
+use serde_with::SerializeDisplay;
+use strum::AsRefStr;
 
 pub type Result<T> = core::result::Result<T, CustomErr>;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, AsRefStr)]
+#[serde(tag = "type", content = "data")]
 pub enum CustomErr {
     LoginFail,
 
@@ -18,6 +22,15 @@ pub enum CustomErr {
 
     // -- Model errors.
     TicketDeleteFailIdNotFound { id: u64 },
+}
+
+#[derive(Debug, AsRefStr)]
+#[allow(non_camel_case_types)]
+pub enum ClientError {
+    LOGIN_FAIL,
+    NO_AUTH,
+    INVALID_PARAMS,
+    SERVICE_ERROR,
 }
 
 impl fmt::Display for CustomErr {
@@ -51,16 +64,42 @@ impl CustomErr {
             _ => "internal server error",
         }
     }
+
+    pub fn client_status_and_error(&self) -> (StatusCode, ClientError) {
+        #[allow(unreachable_patterns)]
+        match self {
+            Self::LoginFail => (StatusCode::FORBIDDEN, ClientError::LOGIN_FAIL),
+            // --Auth
+            Self::AuthFailNoAuthTokenCookie
+            | Self::AuthFailTokenWrongFormat
+            | Self::AuthFailCtxNotInRequestExt => (StatusCode::FORBIDDEN, ClientError::NO_AUTH),
+            // --Model
+            Self::TicketDeleteFailIdNotFound { .. } => {
+                (StatusCode::BAD_REQUEST, ClientError::INVALID_PARAMS)
+            }
+            // --fallback_service
+            _ => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                ClientError::SERVICE_ERROR,
+            ),
+        }
+    }
 }
 
 impl IntoResponse for CustomErr {
     fn into_response(self) -> axum::response::Response {
         println!("->> {:<12} - {:?}", "INTO_RES", self);
 
-        let status = self.status_code();
-        let msg = self.client_message();
+        // let status = self.status_code();
+        // let msg = self.client_message();
 
-        (status, msg).into_response()
+        // (status, msg).into_response()
+        // create a placeholder for axum response
+        let mut response = StatusCode::INTERNAL_SERVER_ERROR.into_response();
+
+        // Insert the Error into the response
+        response.extensions_mut().insert(self);
+        response
     }
 }
 
