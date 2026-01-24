@@ -1,8 +1,5 @@
-use crate::model::ModelController;
-
 pub use self::error::{CustomErr, Result};
-use std::net::SocketAddr;
-
+use crate::model::ModelController;
 use axum::{
     Router,
     extract::{Path, Query},
@@ -11,10 +8,12 @@ use axum::{
     routing::{get, get_service},
 };
 use serde::Deserialize;
+use std::net::SocketAddr;
 use tokio::net::TcpListener;
 use tower_cookies::CookieManagerLayer;
 use tower_http::services::ServeDir;
 
+mod ctx;
 mod error;
 mod model;
 mod web;
@@ -22,36 +21,42 @@ mod web;
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize ModelController
-    let mc: ModelController = ModelController::new().await?;
+    let mc = ModelController::new().await?;
 
-    // router
+    // Protected API routes
+    let routes_apis = web::routes_tickets::routes(mc.clone())
+        .route_layer(middleware::from_fn(web::mw_auth::mw_require_auth));
+
+    // Main router
     let app = Router::new()
         .merge(routes_hello())
         .merge(web::routes_login::routes())
-        .nest("/api", web::routes_tickets::routes(mc.clone()))
+        .nest("/api", routes_apis)
         .layer(middleware::map_response(main_response_mapper))
+        .layer(middleware::from_fn_with_state(
+            mc.clone(),
+            web::mw_auth::mw_ctx_resolver,
+        ))
         .layer(CookieManagerLayer::new())
         .fallback_service(routes_static());
 
-    // address
+    // Start server
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
-
     let listener = TcpListener::bind(addr).await.unwrap();
     println!("->> [SERVER] LISTENING on {addr}");
-
     axum::serve(listener, app).await.unwrap();
 
     Ok(())
 }
 
-// region: layers
+// region: --- Layers
 async fn main_response_mapper(res: Response) -> Response {
     println!("->> {:<12} - main_response_mapper", "RES_MAPPER");
-
     res
 }
-//region: routtes_static
+// endregion: --- Layers
 
+// region: --- Routes Static
 fn routes_static() -> Router {
     Router::new().fallback_service(get_service(ServeDir::new("./")).handle_error(
         |err| async move {
@@ -62,30 +67,30 @@ fn routes_static() -> Router {
         },
     ))
 }
+// endregion: --- Routes Static
 
+// region: --- Routes Hello
 #[derive(Debug, Deserialize)]
 struct HelloParam {
     name: Option<String>,
 }
 
-//region: axum composition of routers -> routtes-Hello
 fn routes_hello() -> Router {
     Router::new()
         .route("/hello", get(hello_handler))
         .route("/hello/{id}", get(hello_p_handler))
 }
-// handler
-// with query param =  /hello?name=ebuka
+
+// Handler with query param: /hello?name=ebuka
 async fn hello_handler(Query(params): Query<HelloParam>) -> impl IntoResponse {
     println!("->> {:<12} - hello_handler - {params:?}", "HANDLER");
-
-    let name = params.name.as_deref().unwrap_or("no name");
-    Html(format!("<strong>Hello, {name}</strong>"))
+    let name = params.name.as_deref().unwrap_or("World");
+    Html(format!("<strong>Hello, {name}!</strong>"))
 }
 
-//eg /hello2/id
+// Handler with path param: /hello/123
 async fn hello_p_handler(Path(id): Path<String>) -> impl IntoResponse {
-    println!("->> {:<12} - hello_handler - {id:?}", "HANDLER");
-
-    Html(format!("<strong>Hello {id} </strong>"))
+    println!("->> {:<12} - hello_p_handler - {id:?}", "HANDLER");
+    Html(format!("<strong>Hello, {id}!</strong>"))
 }
+// endregion: --- Routes Hello
