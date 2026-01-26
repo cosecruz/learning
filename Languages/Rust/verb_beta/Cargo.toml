@@ -6,5 +6,6 @@ edition = "2024"
 [dependencies]
 # core async runtime
 axum = { version = "0.8.8", features = ["macros"] }
+dotenvy = "0.15.7"
 # web framework- axum with macros for routing
 tokio = { version = "1.49.0", features = ["full"] }
