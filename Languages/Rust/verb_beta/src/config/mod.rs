@@ -1,14 +1,14 @@
 mod environment;
+pub mod telemetry;
 
+use self::environment::Environment;
 use std::net::SocketAddr;
-
-use crate::config::environment::Environment;
 
 #[derive(Debug)]
 pub struct Config {
     pub host: String,
     pub port: u16,
-    pub log_level: String,
+    pub rust_log: String,
     pub environment: Environment,
     // db_url
 }
@@ -22,9 +22,9 @@ impl Config {
             dotenvy::dotenv().ok(); // silently ignore errors
         }
 
-        let host = env("HOST").unwrap_or_else(|| "127.0.0.1".to_string());
+        let host = env("APP_HOST").unwrap_or_else(|| "127.0.0.1".to_string());
 
-        let port = match env("PORT") {
+        let port = match env("APP_PORT") {
             Some(s) => s
                 .parse()
                 .map_err(|_| "Port must be a valid u16".to_string())?,
@@ -36,7 +36,7 @@ impl Config {
             },
         };
 
-        let log_level = env("LOG_LEVEL").unwrap_or_else(|| "info".to_string());
+        let rust_log = env("RUST_LOG").unwrap_or_else(|| "info".to_string());
 
         // Validate that host + port forms a valid SocketAddr
         let addr_str = format!("{host}:{port}");
@@ -47,7 +47,7 @@ impl Config {
         Ok(Self {
             host,
             port,
-            log_level,
+            rust_log,
             environment,
         })
     }

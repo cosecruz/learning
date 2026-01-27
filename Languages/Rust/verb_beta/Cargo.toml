@@ -9,3 +9,5 @@ axum = { version = "0.8.8", features = ["macros"] }
 dotenvy = "0.15.7"
 # web framework- axum with macros for routing
 tokio = { version = "1.49.0", features = ["full"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.22", features = ["env-filter", "json"] }

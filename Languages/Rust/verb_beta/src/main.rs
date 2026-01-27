@@ -1,22 +1,26 @@
-pub(crate) use std::net::SocketAddr;
-
 use axum::response::Html;
 use axum::routing::get;
+use tracing::{info, warn};
+
+use crate::config::telemetry;
 
 mod config;
+mod web;
 
 #[allow(unused)]
 #[tokio::main]
 async fn main() {
-    //note: program for both dev, uat and prod in mind
-    // TODO: setup tracing properly
-
+    // -- Load Config
     // region: Config
     let config = config::Config::load().expect("Failed to load configurations");
     println!("Config: {config:?}");
     // endregion: Config
 
-    println!("[VERB SERVER] starting");
+    // -- Initialize telemetry
+    // region: telemetry
+    telemetry::init_tracing(&config);
+
+    // endregion: telemetry
 
     // region: LISTENER
     let addr = config.socket_addr();
@@ -25,7 +29,7 @@ async fn main() {
         .await
         .expect("Failed to bind listener");
 
-    println!("[VERB SERVER] listening on {addr}");
+    info!("[VERB SERVER] listening on {addr}");
     // endregion: LISTENER
 
     // region: SERVICE ROUTERS
@@ -46,5 +50,5 @@ async fn shutdown_signal() {
     tokio::signal::ctrl_c()
         .await
         .expect("failed to install Ctrl+C handler");
-    println!("[VERB SERVER] received shutdown signal");
+    warn!("[VERB SERVER] received shutdown signal");
 }
