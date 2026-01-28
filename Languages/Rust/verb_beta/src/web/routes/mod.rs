@@ -1,5 +1,5 @@
 use axum::{
-    Router,
+    Json, Router,
     response::Html,
     routing::{delete, get, post, put},
 };
@@ -33,7 +33,9 @@ pub fn app(state: AppState) -> Router {
 /// - landing pages
 /// - temporary testing endpoints
 fn root_routes() -> Router<AppState> {
-    Router::new().route("/", get(|| async { Html("<h1>Welcome, Let’s Verb</h1>") }))
+    Router::new()
+        .route("/", get(|| async { Html("<h1>Welcome, Let’s Verb</h1>") }))
+        .route("/health", get(|| async { Json("ok") }))
 }
 
 /// Version 1 API routes.

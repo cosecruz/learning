@@ -5,6 +5,7 @@ use crate::{config::telemetry, errors::AppResult};
 mod config;
 mod errors;
 mod server;
+mod services;
 mod web;
 
 #[allow(unused)]

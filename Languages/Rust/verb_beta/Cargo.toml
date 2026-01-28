@@ -7,8 +7,12 @@ edition = "2024"
 anyhow = "1.0.100"
 # core async runtime
 axum = { version = "0.8.8", features = ["macros"] }
+chrono = "0.4.43"
 dotenvy = "0.15.7"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
 thiserror = "2.0.18"
+time = "0.3.46"
 # web framework- axum with macros for routing
 tokio = { version = "1.49.0", features = ["full"] }
 tower = "0.5.3"
