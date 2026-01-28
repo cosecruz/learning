@@ -1,9 +1,11 @@
 use anyhow::Context;
-use axum::response::Html;
-use axum::routing::get;
 use tracing::{info, instrument, warn};
 
-use crate::{config::Config, errors::AppResult};
+use crate::{
+    config::Config,
+    errors::AppResult,
+    web::{self, AppState},
+};
 
 /// run server
 #[instrument(skip(cfg), fields(
@@ -25,13 +27,14 @@ pub async fn start_server(cfg: &Config) -> AppResult<()> {
 
     //Step 2: Router
     // region: SERVICE ROUTERS
-    let app = axum::Router::new()
-        .route("/", get(|| async { Html("<h1>Hello Verb</h1>") }))
-        .into_make_service();
+    // initialize state
+    let state = AppState {};
+
+    let svc = web::app(state);
     // endregion: SERVICE ROUTERS
 
     //Step 3: Axum Server
-    axum::serve(listener, app)
+    axum::serve(listener, svc)
         .with_graceful_shutdown(shutdown_signal())
         .await
         .context("axum server exited unexpectedly")?;
