@@ -3,7 +3,7 @@
 
 use thiserror::Error;
 
-use super::VerbState;
+use super::model::verb::VerbState;
 
 /// Errors raised by domain rule violations.
 #[derive(Debug, Error)]
@@ -12,5 +12,11 @@ pub enum CoreError {
     InvalidStateTransition { from: VerbState, to: VerbState },
 
     #[error("InvalidReason")]
-    InvalidReason,
+    EmptyReason,
+
+    #[error("InvalidTimeStamp")]
+    InvalidTimeStamp,
+
+    #[error("InvalidDescription")]
+    EmptyDescription,
 }

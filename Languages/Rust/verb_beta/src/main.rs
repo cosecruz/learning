@@ -8,7 +8,6 @@ mod server;
 mod services;
 mod web;
 
-#[allow(unused)]
 #[tokio::main]
 async fn main() -> AppResult<()> {
     // -- Load Config

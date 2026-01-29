@@ -59,9 +59,8 @@
 //!
 mod core;
 
-pub(super) use core::error::CoreError;
-
-mod error {
+use core::error::CoreError;
+pub(crate) mod error {
     use thiserror::Error;
 
     use crate::services::CoreError;

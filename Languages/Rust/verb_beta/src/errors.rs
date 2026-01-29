@@ -13,9 +13,13 @@ pub type AppResult<T> = anyhow::Result<T>;
 
 #[derive(Debug, Error)]
 pub enum _AppError {
-    // errors that happen in configuration phase
+    /// configuration errors
     #[error("Configuration Error")]
     Config(#[from] crate::config::ConfigError),
+
+    /// service level errors
+    #[error("Service Error")]
+    Service(#[from] crate::services::error::ServiceError),
     // // errors that happen in Domain- Models and Entities: contains core business logic
     // DomainError,
 
