@@ -2,9 +2,9 @@ use anyhow::Context;
 use tracing::{info, instrument, warn};
 
 use crate::{
+    api::{self, AppState},
     config::Config,
-    errors::AppResult,
-    web::{self, AppState},
+    error::AppResult,
 };
 
 /// run server
@@ -30,7 +30,7 @@ pub async fn start_server(cfg: &Config) -> AppResult<()> {
     // initialize state
     let state = AppState {};
 
-    let svc = web::app(state);
+    let svc = api::app(state);
     // endregion: SERVICE ROUTERS
 
     //Step 3: Axum Server

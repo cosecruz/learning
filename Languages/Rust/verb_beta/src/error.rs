@@ -16,10 +16,9 @@ pub enum _AppError {
     /// configuration errors
     #[error("Configuration Error")]
     Config(#[from] crate::config::ConfigError),
-
-    /// service level errors
-    #[error("Service Error")]
-    Service(#[from] crate::services::error::ServiceError),
+    // service level errors
+    // #[error("Service Error")]
+    // Service(#[from] crate::services::error::ServiceError),
     // // errors that happen in Domain- Models and Entities: contains core business logic
     // DomainError,
 

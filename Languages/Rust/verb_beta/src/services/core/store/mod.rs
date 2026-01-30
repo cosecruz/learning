@@ -1,1 +1,1 @@
-mod verb_store;
+pub mod verb_store;

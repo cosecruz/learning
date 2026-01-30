@@ -1,4 +1,4 @@
-//! # Web Interface Layer
+//! # Web Interface Layer for HTTP
 //!
 //! This module represents the **HTTP interface layer** of the system.
 //! It is responsible for adapting external HTTP requests into
@@ -43,6 +43,8 @@
 //! Infrastructure depends on Application interfaces but is never depended on
 //! by inner layers.
 
+mod dto;
+mod error;
 mod handlers;
 mod middlewares;
 mod routes;

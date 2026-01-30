@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::services::core::model::verb::VerbId;
+use crate::domain::model::VerbId;
 
 /* ============================
 Tasks

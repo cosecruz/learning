@@ -1,9 +1,10 @@
 use std::fmt;
 
-use crate::services::core::error::CoreError;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 use uuid::Uuid;
+
+use crate::domain::{error::DomainError, model::ActionLog};
 
 // ============================================================================
 // Value Objects
@@ -46,13 +47,13 @@ impl std::str::FromStr for VerbId {
 struct Title(String);
 
 impl Title {
-    fn new(value: impl Into<String>) -> Result<Self, CoreError> {
+    fn new(value: impl Into<String>) -> Result<Self, DomainError> {
         let v = value.into().trim().to_string();
         if v.is_empty() {
-            return Err(CoreError::EmptyTitle);
+            return Err(DomainError::EmptyTitle);
         }
         if v.len() > 200 {
-            return Err(CoreError::TitleTooLong);
+            return Err(DomainError::TitleTooLong);
         }
         Ok(Self(v))
     }
@@ -68,10 +69,10 @@ impl Title {
 struct Description(String);
 
 impl Description {
-    fn new(value: impl Into<String>) -> Result<Self, CoreError> {
+    fn new(value: impl Into<String>) -> Result<Self, DomainError> {
         let v = value.into();
         if v.len() > 2000 {
-            return Err(CoreError::DescriptionTooLong);
+            return Err(DomainError::DescriptionTooLong);
         }
         Ok(Self(v))
     }
@@ -100,7 +101,7 @@ impl Verb {
     pub fn new(
         title: impl Into<String>,
         description: impl Into<String>,
-    ) -> Result<Self, CoreError> {
+    ) -> Result<Self, DomainError> {
         let now = OffsetDateTime::now_utc();
         Ok(Self {
             id: VerbId::new(),
@@ -184,14 +185,14 @@ impl VerbState {
         }
     }
 
-    pub fn from_str(s: &str) -> Result<Self, CoreError> {
+    pub fn from_str(s: &str) -> Result<Self, DomainError> {
         match s {
             "Captured" => Ok(VerbState::Captured),
             "Active" => Ok(VerbState::Active),
             "Paused" => Ok(VerbState::Paused),
             "Done" => Ok(VerbState::Done),
             "Dropped" => Ok(VerbState::Dropped),
-            _ => Err(CoreError::InvalidState(s.to_string())),
+            _ => Err(DomainError::InvalidState(s.to_string())),
         }
     }
 }
@@ -242,17 +243,17 @@ impl Verb {
         &mut self,
         next: VerbState,
         reason: Option<String>,
-    ) -> Result<super::ActionLog, CoreError> {
+    ) -> Result<ActionLog, DomainError> {
         // Validate reason length
         if let Some(ref r) = reason
             && r.len() > 500
         {
-            return Err(CoreError::ReasonTooLong);
+            return Err(DomainError::ReasonTooLong);
         }
 
         // Check transition validity
         if !self.can_transition_to(next) {
-            return Err(CoreError::InvalidTransition {
+            return Err(DomainError::InvalidTransition {
                 from: self.state,
                 to: next,
             });
@@ -262,7 +263,7 @@ impl Verb {
         self.state = next;
         self.updated_at = OffsetDateTime::now_utc();
 
-        Ok(super::action_log::ActionLog::from_transition(
+        Ok(ActionLog::from_transition(
             self.id,
             Some(from_state),
             next,
@@ -284,7 +285,7 @@ mod tests {
     #[test]
     fn rejects_empty_title() {
         let result = Verb::new("", "Desc");
-        assert!(matches!(result, Err(CoreError::EmptyTitle)));
+        assert!(matches!(result, Err(DomainError::EmptyTitle)));
     }
 
     #[test]

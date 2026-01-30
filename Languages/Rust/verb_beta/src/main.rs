@@ -1,12 +1,13 @@
 use tracing::{debug, error};
 
-use crate::{config::telemetry, errors::AppResult};
+use crate::{config::telemetry, error::AppResult};
 
+mod api;
 mod config;
-mod errors;
+mod domain;
+mod error;
+mod infra;
 mod server;
-mod services;
-mod web;
 
 #[tokio::main]
 async fn main() -> AppResult<()> {

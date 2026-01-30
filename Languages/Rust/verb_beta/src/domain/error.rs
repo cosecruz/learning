@@ -1,25 +1,12 @@
-//! Core Service Errors
-//!
-
+//! # **Domain Error - VerbError**
+//! COntains only domain specific errors: errors that can occur in the domain layer
+//! TODO: List and explain all the errors;
 use thiserror::Error;
 
-use super::model::verb::VerbState;
+use crate::domain::model::VerbState;
 
-/// Errors raised by domain rule violations.
 #[derive(Debug, Error)]
-pub enum CoreError {
-    // #[error("InvalidStateTransition '{from} -> {to}'")]
-    // InvalidStateTransition { from: VerbState, to: VerbState },
-
-    // #[error("InvalidReason")]
-    // EmptyReason,
-
-    // #[error("InvalidTimeStamp")]
-    // InvalidTimeStamp,
-
-    // #[error("InvalidDescription")]
-    // EmptyDescription,
-
+pub enum DomainError {
     // Validation errors
     #[error("Title cannot be empty")]
     EmptyTitle,

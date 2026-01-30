@@ -14,6 +14,7 @@
 //!
 
 pub(super) mod error;
+pub mod infra;
 ///model contains all the entities and their structure and business logic
 pub mod model;
 ///store contains their behavior and interaction as well as domain specific persistence ,ore like usecases
