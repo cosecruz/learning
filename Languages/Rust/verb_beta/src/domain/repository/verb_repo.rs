@@ -1,23 +1,41 @@
-use crate::domain::{
-    error::DomainError,
-    model::{ActionLog, Verb, VerbId, VerbState},
+use std::pin::Pin;
+
+use crate::{
+    application::ApplicationError,
+    domain::model::{ActionLog, Verb, VerbId, VerbState},
 };
 
 // ==================================================
 // VERB REPOSITORY TRAIT
 // ==================================================
-pub trait VerbRepository: Send + Sync {
-    ///Create a new verb and its initial action log atomically
-    async fn create(&self, verb: &Verb, action_log: &ActionLog) -> Result<(), DomainError>;
+/// PORT: What the domain needs from persistence.
+///
+/// This is a **port** in hexagonal architecture.
+/// It defines capabilities without knowing how they're implemented.
+///
+/// Note: This is NOT async because the domain layer is sync.
+/// The application layer will use async trait implementations.
+pub trait VerbRepository: Send + Sync + 'static {
+    /// Store a verb
+    fn save(
+        &self,
+        verb: &Verb,
+    ) -> Pin<Box<dyn Future<Output = Result<(), ApplicationError>> + Send + '_>>;
 
-    /// Get verb by ID
-    async fn get_by_id(&self, id: VerbId) -> Result<Option<Verb>, DomainError>;
+    /// Retrieve verb by ID
+    fn find_by_id(
+        &self,
+        id: VerbId,
+    ) -> Pin<Box<dyn Future<Output = Result<Option<Verb>, ApplicationError>> + Send + '_>>;
 
     /// List verbs with optional filtering
-    async fn list(&self, filter: VerbFilter) -> Result<VerbListResult, DomainError>;
+    fn list(
+        &self,
+        filter: VerbFilter,
+    ) -> Pin<Box<dyn Future<Output = Result<VerbListResult, ApplicationError>> + Send + '_>>;
 
-    /// Update verb state and append action log atomically
-    async fn update_state(&self, verb: &Verb, action_log: &ActionLog) -> Result<(), DomainError>;
+    // Update verb state and append action log atomically
+    // fn update_state(&self, verb: &Verb, action_log: &ActionLog) -> Result<(), Self::Error>;
 }
 
 // ============================================================================

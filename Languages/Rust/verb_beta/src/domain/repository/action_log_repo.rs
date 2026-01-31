@@ -1,16 +1,24 @@
-use crate::domain::{
-    error::DomainError,
-    model::{ActionLog, VerbId},
+use std::{error::Error, pin::Pin};
+
+use crate::{
+    application::ApplicationError,
+    domain::model::{ActionLog, VerbId},
 };
 
 // ==================================================
 // ACTION_LOG REPOSITORY TRAIT
 // ==================================================
-pub trait ActionLogRepository: Send + Sync {
+pub trait ActionLogRepository: Send + Sync + 'static {
+    /// Append an action log entry
+    fn append(
+        &self,
+        log: &ActionLog,
+    ) -> Pin<Box<dyn Future<Output = Result<(), ApplicationError>> + Send + '_>>;
+
     /// Get action logs for a specific verb
-    async fn get_for_verb(
+    fn find_by_verb(
         &self,
         verb_id: VerbId,
-        limit: u32,
-    ) -> Result<Vec<ActionLog>, DomainError>;
+        limit: usize,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<ActionLog>, ApplicationError>> + Send + '_>>;
 }

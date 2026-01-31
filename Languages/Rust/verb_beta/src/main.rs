@@ -3,6 +3,7 @@ use tracing::{debug, error};
 use crate::{config::telemetry, error::AppResult};
 
 mod api;
+mod application;
 mod config;
 mod domain;
 mod error;

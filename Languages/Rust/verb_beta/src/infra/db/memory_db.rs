@@ -4,6 +4,7 @@ use tokio::sync::Mutex;
 
 use crate::{
     domain::{
+        ApplicationError,
         model::{ActionLog, Verb, VerbState},
         repository::{action_log_repo::ActionLogRepository, verb_repo::VerbRepository},
     },
@@ -37,16 +38,13 @@ VerbRepository Implementation
 ================================ */
 
 impl VerbRepository for InMemoryRepo {
+    // =============================================================
     async fn create(
         &self,
         verb: &Verb,
         action_log: &ActionLog,
-    ) -> Result<(), crate::domain::error::DomainError> {
+    ) -> Result<(), crate::domain::error::ApplicationError> {
         // must atomically create and store verb and actionlog
-
-        //  a valid action log here;
-        // an action with from_state = None and to_state = created
-        // and action_log.verb_id() = verb.id()
         use VerbState::*;
 
         let valid_log = matches!(
@@ -59,7 +57,7 @@ impl VerbRepository for InMemoryRepo {
         );
 
         if !valid_log {
-            return Err(crate::domain::error::DomainError::NotFound);
+            return Err(ApplicationError::Placeholder);
         }
 
         let mut verbs = self.verb_store.lock().await;
@@ -67,7 +65,7 @@ impl VerbRepository for InMemoryRepo {
 
         // uniqueness check
         if verbs.iter().any(|v| v.id() == verb.id()) {
-            return Err(crate::domain::error::DomainError::NotFound);
+            return Err(crate::domain::error::ApplicationError::Placeholder);
         }
 
         verbs.push(verb.clone());
@@ -79,18 +77,19 @@ impl VerbRepository for InMemoryRepo {
     async fn get_by_id(
         &self,
         id: crate::domain::model::VerbId,
-    ) -> Result<Option<Verb>, crate::domain::error::DomainError> {
+    ) -> Result<Option<Verb>, crate::domain::error::ApplicationError> {
         let verbs = self.verb_store.lock().await;
 
         Ok(verbs.iter().find(|v| v.id() == id).cloned())
     }
 
+    // ==============================================================
     async fn list(
         &self,
         filter: crate::domain::repository::verb_repo::VerbFilter,
     ) -> Result<
         crate::domain::repository::verb_repo::VerbListResult,
-        crate::domain::error::DomainError,
+        crate::domain::error::ApplicationError,
     > {
         let verbs = self.verb_store.lock().await;
 
@@ -124,11 +123,12 @@ impl VerbRepository for InMemoryRepo {
         })
     }
 
+    // ==================================================================
     async fn update_state(
         &self,
         verb: &Verb,
         action_log: &ActionLog,
-    ) -> Result<(), crate::domain::error::DomainError> {
+    ) -> Result<(), crate::domain::error::ApplicationError> {
         let mut verbs = self.verb_store.lock().await;
         let mut logs = self.action_log_store.lock().await;
 
@@ -137,12 +137,12 @@ impl VerbRepository for InMemoryRepo {
 
         let idx = match pos {
             Some(i) => i,
-            None => return Err(crate::domain::error::DomainError::NotFound),
+            None => return Err(crate::domain::error::ApplicationError::Placeholder),
         };
 
         // invariant: action log must match verb
         if action_log.verb_id() != verb.id() {
-            return Err(crate::domain::error::DomainError::NotFound);
+            return Err(crate::domain::error::ApplicationError::Placeholder);
         }
 
         // replace verb snapshot
@@ -163,7 +163,7 @@ impl ActionLogRepository for InMemoryRepo {
         &self,
         verb_id: crate::domain::model::VerbId,
         limit: u32,
-    ) -> Result<Vec<ActionLog>, crate::domain::error::DomainError> {
+    ) -> Result<Vec<ActionLog>, crate::domain::error::ApplicationError> {
         todo!()
     }
 }

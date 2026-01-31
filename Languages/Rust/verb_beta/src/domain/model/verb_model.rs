@@ -1,3 +1,4 @@
+//! Verb Models
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
@@ -35,7 +36,7 @@ impl fmt::Display for VerbId {
 }
 
 impl std::str::FromStr for VerbId {
-    type Err = uuid::Error;
+    type Err = DomainError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Self(Uuid::parse_str(s)?))
@@ -50,10 +51,10 @@ impl Title {
     fn new(value: impl Into<String>) -> Result<Self, DomainError> {
         let v = value.into().trim().to_string();
         if v.is_empty() {
-            return Err(DomainError::EmptyTitle);
+            return Err(DomainError::VerbEmptyTitle);
         }
         if v.len() > 200 {
-            return Err(DomainError::TitleTooLong);
+            return Err(DomainError::VerbTitleTooLong);
         }
         Ok(Self(v))
     }
@@ -72,7 +73,7 @@ impl Description {
     fn new(value: impl Into<String>) -> Result<Self, DomainError> {
         let v = value.into();
         if v.len() > 2000 {
-            return Err(DomainError::DescriptionTooLong);
+            return Err(DomainError::VerbDescriptionTooLong);
         }
         Ok(Self(v))
     }
@@ -86,6 +87,11 @@ impl Description {
 // Verb Entity
 // ============================================================================
 /// Domain entity representing a user's intent over time.
+///
+/// This entity encapsulates all business rules around:
+/// - Creation validation
+/// - State transitions
+/// - Temporal consistency
 #[derive(Debug, Clone)]
 pub struct Verb {
     id: VerbId,
@@ -97,7 +103,12 @@ pub struct Verb {
 }
 
 impl Verb {
-    /// Create new verb in Captured state
+    /// Create a new verb in Captured state.
+    ///
+    /// This is a **factory method** that enforces invariants:
+    /// - Title must be 1-200 chars
+    /// - Description must be 0-2000 chars
+    /// - Initial state is always Captured
     pub fn new(
         title: impl Into<String>,
         description: impl Into<String>,
@@ -113,7 +124,10 @@ impl Verb {
         })
     }
 
-    /// Reconstruct verb from persistence (no validation)
+    /// Reconstruct a verb from persistence (bypasses validation).
+    ///
+    /// Used by repositories when loading from database.
+    /// Assumes data was validated when originally created.
     pub fn from_parts(
         id: VerbId,
         title: String,
@@ -121,18 +135,20 @@ impl Verb {
         state: VerbState,
         created_at: OffsetDateTime,
         updated_at: OffsetDateTime,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, DomainError> {
+        Ok(Self {
             id,
-            title: Title(title),
-            description: Description(description),
+            title: Title::new(title)?,
+            description: Description::new(description)?,
             state,
             created_at,
             updated_at,
-        }
+        })
     }
 
-    // Getters
+    // ========================================================================
+    // Getters (domain entities expose their state)
+    // ========================================================================
     pub fn id(&self) -> VerbId {
         self.id
     }
@@ -143,7 +159,7 @@ impl Verb {
         self.description.as_str()
     }
     pub fn state(&self) -> VerbState {
-        self.state.clone()
+        self.state
     }
     pub fn created_at(&self) -> OffsetDateTime {
         self.created_at
@@ -192,7 +208,7 @@ impl VerbState {
             "Paused" => Ok(VerbState::Paused),
             "Done" => Ok(VerbState::Done),
             "Dropped" => Ok(VerbState::Dropped),
-            _ => Err(DomainError::InvalidState(s.to_string())),
+            _ => Err(DomainError::VerbInvalidState(s.to_string())),
         }
     }
 }
@@ -208,6 +224,9 @@ impl fmt::Display for VerbState {
 // ============================================================================
 
 impl Verb {
+    //========================================================================
+    // State Machine (core business logic)
+    // ========================================================================
     /// **Valid Transitions**
     ///- Captured → Active
     ///- Paused → Active
@@ -223,6 +242,15 @@ impl Verb {
     ///- Paused → Dropped
     ///
     /// Transition abstraction to check if state transition is valid
+    ///
+    /// Check if transition to next state is valid.
+    ///
+    /// State machine rules:
+    /// - Captured -> Active, Dropped
+    /// - Active -> Paused, Done, Dropped
+    /// - Paused -> Active, Dropped
+    ///
+    /// Invalid transitions return false (domain protects its invariants).
     pub fn can_transition_to(&self, next: VerbState) -> bool {
         use VerbState::*;
         matches!(
@@ -239,6 +267,15 @@ impl Verb {
         )
     }
 
+    /// Transition to next state, producing an ActionLog.
+    ///
+    /// This method:
+    /// 1. Validates the transition
+    /// 2. Updates internal state
+    /// 3. Returns an ActionLog (event)
+    ///
+    /// The ActionLog MUST be persisted atomically with the verb.
+    /// This is enforced by the application layer via transactions.
     pub fn transition_to(
         &mut self,
         next: VerbState,
@@ -272,6 +309,9 @@ impl Verb {
     }
 }
 
+//================================================
+// UNIT TESTS
+//================================================
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -285,7 +325,7 @@ mod tests {
     #[test]
     fn rejects_empty_title() {
         let result = Verb::new("", "Desc");
-        assert!(matches!(result, Err(DomainError::EmptyTitle)));
+        assert!(matches!(result, Err(DomainError::VerbEmptyTitle)));
     }
 
     #[test]
