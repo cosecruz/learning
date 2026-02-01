@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{pin::Pin, sync::Arc};
 
 use async_trait::async_trait;
 use tokio::sync::Mutex;
@@ -10,8 +10,13 @@ use crate::infra::{
 
 /// In-memory database implementation
 ///
-/// Uses Mutex for thread-safe shared state.
-/// Good for testing, not for production.
+/// Uses `Arc<Mutex<Vec<T>>>` for thread-safe shared state.
+/// Good for testing and single-user scenarios.
+///
+/// ## Design Notes:
+/// - Cloning is cheap (only increments Arc reference count)
+/// - Mutex provides interior mutability
+/// - Not suitable for high-concurrency production use
 #[derive(Clone)]
 pub struct InMemoryDatabase {
     verb_store: Arc<Mutex<Vec<crate::domain::model::Verb>>>,
@@ -27,39 +32,45 @@ impl InMemoryDatabase {
     }
 }
 
-#[async_trait]
 impl Database for InMemoryDatabase {
-    // The GAT: Our transaction type is InMemoryTransaction
+    /// GAT: Our transaction type is InMemoryTransaction
     ///
-    /// The <'tx> lifetime ties the transaction to the database reference
+    /// The `'tx` lifetime parameter allows the transaction to borrow from self.
+    /// However, InMemoryTransaction doesn't actually need 'tx because it owns Arc clones.
     type Transaction<'tx>
         = InMemoryTransaction
     where
         Self: 'tx;
 
-    async fn begin_tx(&self) -> Result<Self::Transaction<'_>, DatabaseError> {
-        // Clone Arcs - cheap, just incrementing reference counts
-        Ok(InMemoryTransaction::new(
-            Arc::clone(&self.verb_store),
-            Arc::clone(&self.action_log_store),
-        ))
+    fn begin_tx(
+        &self,
+    ) -> Pin<Box<dyn Future<Output = Result<Self::Transaction<'_>, DatabaseError>> + Send + '_>>
+    {
+        // Clone Arcs (cheap - just reference count increment)
+        let verb_store = Arc::clone(&self.verb_store);
+        let action_log_store = Arc::clone(&self.action_log_store);
+
+        // Return boxed future for object safety
+        Box::pin(async move { Ok(InMemoryTransaction::new(verb_store, action_log_store)) })
     }
 }
 
 /// In-memory transaction
 ///
-/// This is a "fake" transaction - it doesn't provide true isolation.
-/// Changes are visible immediately. Good enough for testing.
+/// This is a "fake" transaction - it doesn't provide true ACID isolation.
+/// Changes are visible immediately to other transactions.
 ///
-/// Note: This struct doesn't hold a lifetime parameter because it owns
-/// Arc clones, not references to the database.
+/// ## Why no lifetime parameter?
+/// Even though Database::Transaction<'tx> has a lifetime parameter,
+/// InMemoryTransaction doesn't use it because it owns Arc clones,
+/// not borrows from the database.
 pub struct InMemoryTransaction {
     verb_repo: InMemoryVerbRepo,
     action_log_repo: InMemoryActionLogRepo,
 }
 
 impl InMemoryTransaction {
-    fn new(
+    pub fn new(
         verb_store: Arc<Mutex<Vec<crate::domain::model::Verb>>>,
         action_log_store: Arc<Mutex<Vec<crate::domain::model::ActionLog>>>,
     ) -> Self {
@@ -70,18 +81,17 @@ impl InMemoryTransaction {
     }
 }
 
-#[async_trait]
 impl DatabaseTransaction for InMemoryTransaction {
+    fn verb_repository(&self) -> &dyn crate::domain::repository::VerbRepository {
+        &self.verb_repo
+    }
+
     fn action_log_repository(&self) -> &dyn crate::domain::repository::ActionLogRepository {
         &self.action_log_repo
     }
 
-    async fn commit(self) -> Result<(), DatabaseError> {
+    fn commit(self) -> Pin<Box<dyn Future<Output = Result<(), DatabaseError>> + Send + 'static>> {
         // In-memory "commits" immediately, nothing to do
-        Ok(())
-    }
-
-    fn verb_repository(&self) -> &dyn crate::domain::repository::VerbRepository {
-        &self.verb_repo
+        Box::pin(async { Ok(()) })
     }
 }

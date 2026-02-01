@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+use crate::{application::ApplicationError, infra::error::InfrastructureError};
+
 ///* ✅ The rule (final form)
 ///
 ///✔ At boundaries and orchestrators
@@ -12,24 +14,18 @@ use thiserror::Error;
 pub type AppResult<T> = anyhow::Result<T>;
 
 #[derive(Debug, Error)]
-pub enum _AppError {
+pub enum AppError {
     /// configuration errors
     #[error("Configuration Error")]
     Config(#[from] crate::config::ConfigError),
-    // service level errors
-    // #[error("Service Error")]
-    // Service(#[from] crate::services::error::ServiceError),
-    // // errors that happen in Domain- Models and Entities: contains core business logic
-    // DomainError,
 
-    // // errors that happen in Application: contains use cases
-    // ApplicationError,
+    ///Application errors
+    #[error("Application Error")]
+    Application(#[from] ApplicationError),
 
-    // // INTERFACE ADAPTERS (Controllers, Presenters, Gateways)
-    // InterfaceErrors,
-
-    // // FRAMEWORKS & DRIVERS (Web, DB, UI, External interfaces)
-    // InfraError,
+    /// Infrastructure errors
+    #[error("Application Error")]
+    Infra(#[from] InfrastructureError),
 }
 
 // * thiserror will be used on client facing errors?

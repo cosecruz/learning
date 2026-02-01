@@ -5,4 +5,4 @@ pub mod action_log_repo;
 pub mod verb_repo;
 
 pub use action_log_repo::ActionLogRepository;
-pub use verb_repo::VerbRepository;
+pub use verb_repo::{VerbFilter, VerbListResult, VerbRepository};

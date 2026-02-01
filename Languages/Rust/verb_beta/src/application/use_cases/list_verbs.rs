@@ -3,14 +3,15 @@ use std::sync::Arc;
 use crate::{
     application::error::ApplicationError,
     domain::repository::verb_repo::{VerbFilter, VerbListResult},
-    infra::db::Database,
+    infra::db::{Database, DatabaseTransaction},
 };
 
 /// Use case: List verbs with filtering
 ///
 /// This is a read-only operation, so no transaction needed.
+#[derive(Debug, Clone)]
 pub struct ListVerbsUseCase<D: Database> {
-    pub(crate) db: Arc<D>,
+    pub db: Arc<D>,
 }
 
 impl<D: Database> ListVerbsUseCase<D> {
@@ -19,7 +20,7 @@ impl<D: Database> ListVerbsUseCase<D> {
     }
 
     pub async fn execute(&self, filter: VerbFilter) -> Result<VerbListResult, ApplicationError> {
-        // Read-only operations don't need transactions
+        // Begin transaction (even for reads - ensures consistent snapshot)
         let tx = self
             .db
             .begin_tx()
@@ -28,11 +29,15 @@ impl<D: Database> ListVerbsUseCase<D> {
 
         let verb_repo = tx.verb_repository();
 
+        // Execute query (async)
         let result = verb_repo
             .list(filter)
+            .await
             .map_err(ApplicationError::from_infra)?;
 
-        // No commit needed for read-only
+        // No explicit commit needed for read-only
+        // Transaction will be dropped (rolled back implicitly)
+
         Ok(result)
     }
 }

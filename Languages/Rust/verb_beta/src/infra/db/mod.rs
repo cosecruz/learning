@@ -17,13 +17,15 @@ mod singleton;
 pub use builder::DatabaseBuilder;
 pub use database::{Database, DatabaseTransaction};
 pub use factory::DatabaseFactory;
-pub use singleton::DATABASE;
 
 use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum DatabaseError {
-    #[error("Database config: {0} not supported")]
+    #[error("Invalid configuration: {0}")]
+    InvalidConfig(String),
+
+    #[error("Database type not supported: {0}")]
     NotSupported(String),
 
     #[error("Connection error: {0}")]

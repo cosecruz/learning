@@ -16,8 +16,9 @@ use crate::{
 /// 2. Validate transition (domain)
 /// 3. Execute transition (produces action log)
 /// 4. Save both atomically
+#[derive(Debug, Clone)]
 pub struct TransitionVerbUseCase<D: Database> {
-    pub(crate) db: Arc<D>,
+    pub db: Arc<D>,
 }
 
 impl<D: Database> TransitionVerbUseCase<D> {
@@ -32,7 +33,7 @@ impl<D: Database> TransitionVerbUseCase<D> {
         reason: Option<String>,
     ) -> Result<Verb, ApplicationError> {
         // Begin transaction
-        let mut tx = self
+        let tx = self
             .db
             .begin_tx()
             .await
@@ -42,22 +43,25 @@ impl<D: Database> TransitionVerbUseCase<D> {
         let verb_repo = tx.verb_repository();
         let log_repo = tx.action_log_repository();
 
-        // Load verb
+        // Load verb (async)
         let mut verb = verb_repo
             .find_by_id(verb_id)
+            .await
             .map_err(ApplicationError::from_infra)?
             .ok_or(ApplicationError::NotFound)?;
 
-        // Execute transition (domain validates)
+        // Execute transition (synchronous - domain logic)
         let action_log = verb.transition_to(next_state, reason)?;
 
-        // Save both
+        // Save both (async)
         verb_repo
             .save(&verb)
+            .await
             .map_err(ApplicationError::from_infra)?;
 
         log_repo
             .append(&action_log)
+            .await
             .map_err(ApplicationError::from_infra)?;
 
         // Commit

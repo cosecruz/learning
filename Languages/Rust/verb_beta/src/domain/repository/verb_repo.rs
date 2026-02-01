@@ -2,20 +2,20 @@ use std::pin::Pin;
 
 use crate::{
     application::ApplicationError,
-    domain::model::{ActionLog, Verb, VerbId, VerbState},
+    domain::model::{Verb, VerbId, VerbState},
 };
 
 // ==================================================
 // VERB REPOSITORY TRAIT
 // ==================================================
-/// PORT: What the domain needs from persistence.
+/// PORT: What the domain needs from verb persistence
 ///
-/// This is a **port** in hexagonal architecture.
-/// It defines capabilities without knowing how they're implemented.
-///
-/// Note: This is NOT async because the domain layer is sync.
-/// The application layer will use async trait implementations.
-pub trait VerbRepository: Send + Sync + 'static {
+/// ## Why Pin<Box<dyn Future>>?
+/// - Domain layer is agnostic to async implementation
+/// - Repositories are used behind `&dyn VerbRepository`
+/// - `async fn` would make trait NOT object-safe
+/// - Boxed futures maintain object safety
+pub trait VerbRepository: Send + Sync {
     /// Store a verb
     fn save(
         &self,
@@ -33,9 +33,6 @@ pub trait VerbRepository: Send + Sync + 'static {
         &self,
         filter: VerbFilter,
     ) -> Pin<Box<dyn Future<Output = Result<VerbListResult, ApplicationError>> + Send + '_>>;
-
-    // Update verb state and append action log atomically
-    // fn update_state(&self, verb: &Verb, action_log: &ActionLog) -> Result<(), Self::Error>;
 }
 
 // ============================================================================
@@ -83,5 +80,5 @@ impl VerbFilter {
 #[derive(Debug, Clone)]
 pub struct VerbListResult {
     pub verbs: Vec<Verb>,
-    pub total: i64,
+    pub total: u32,
 }

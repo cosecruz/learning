@@ -9,7 +9,7 @@ use crate::{
         model::{Verb, VerbId, VerbState},
         repository::verb_repo::VerbFilter,
     },
-    infra::db::Database,
+    infra::db::{Database, DatabaseTransaction},
 };
 
 /// Facade: Single entry point for all verb operations
@@ -21,6 +21,7 @@ use crate::{
 /// - Decouples clients from internal use case organization
 /// - Can add cross-cutting concerns (logging, metrics)
 /// - Easier to mock for testing
+#[derive(Debug)]
 pub struct VerbFacade<D: Database> {
     create_use_case: CreateVerbUseCase<D>,
     transition_use_case: TransitionVerbUseCase<D>,
@@ -77,6 +78,7 @@ impl<D: Database> VerbFacade<D> {
 
         verb_repo
             .find_by_id(verb_id)
+            .await
             .map_err(ApplicationError::from_infra)?
             .ok_or(ApplicationError::NotFound)
     }

@@ -8,7 +8,7 @@ use crate::{
 // ==================================================
 // ACTION_LOG REPOSITORY TRAIT
 // ==================================================
-pub trait ActionLogRepository: Send + Sync + 'static {
+pub trait ActionLogRepository: Send + Sync {
     /// Append an action log entry
     fn append(
         &self,

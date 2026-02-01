@@ -7,34 +7,50 @@ use crate::{
     infra::db::DatabaseError,
 };
 
-// Database trait: Defines what a database must provide
+/// Database trait using GAT for proper type-safe transactions
 ///
-/// Core database port (generic, strongly typed)
-/// This is the main **port** for persistence infrastructure.
-/// Different implementations (SQLite, in-memory) implement this trait.
-#[async_trait]
+/// ## Why GAT?
+/// Generic Associated Types allow each database implementation to define
+/// its own transaction type while maintaining lifetime correctness.
+///
+/// ## Why not `async fn`?
+/// `async fn begin_tx(&self)` would make the trait NOT object-safe.
+/// We use `Pin<Box<dyn Future>>` to maintain object safety while supporting async.
+///
+/// ## Object Safety
+/// This trait IS object-safe because:
+/// - No `Self: Sized` methods
+/// - No generic methods
+/// - Associated type has `where Self: 'tx` bounds
 pub trait Database: Send + Sync + 'static {
-    // The transaction type for this database
+    /// The transaction type for this database
     ///
-    /// GAT syntax: type Transaction<'a> means "a type that can have a lifetime 'a"
-    /// The `where Self: 'a` ensures the transaction can't outlive the database
-    type Transaction<'tx>: DatabaseTransaction + 'tx
+    /// GAT allows each implementation to specify its concrete transaction type.
+    /// The `'tx` lifetime ties the transaction to the database reference.
+    type Transaction<'tx>: DatabaseTransaction
     where
         Self: 'tx;
+
     /// Begin a new transaction
     ///
-    /// Returns Self::Transaction<'_>, meaning a transaction tied to &self's lifetime
-    async fn begin_tx(&self) -> Result<Self::Transaction<'_>, DatabaseError>;
+    /// Returns a boxed future for object safety.
+    /// The `'_` lifetime in `Self::Transaction<'_>` is inferred from `&self`.
+    fn begin_tx(
+        &self,
+    ) -> Pin<Box<dyn Future<Output = Result<Self::Transaction<'_>, DatabaseError>> + Send + '_>>;
 }
 
-/// Transaction trait: Scoped unit of work
+// ===========================================================
+/// Transaction trait for scoped unit of work
 ///
-/// Transactions provide:
-/// 1. Repositories bound to this transaction
-/// 2. Commit/rollback semantics
-/// 3. Isolation from other transactions
-#[async_trait]
-pub trait DatabaseTransaction: Send + 'static {
+/// ## Why NOT object-safe?
+/// This trait is NOT object-safe because:
+/// - `commit(self)` consumes self by value
+/// - Cannot be called through `&dyn DatabaseTransaction`
+///
+/// This is OK because transactions are used with concrete types via GAT,
+/// not through trait objects.
+pub trait DatabaseTransaction: Send {
     /// Get verb repository for this transaction
     fn verb_repository(&self) -> &dyn VerbRepository;
 
@@ -43,14 +59,17 @@ pub trait DatabaseTransaction: Send + 'static {
 
     /// Commit this transaction
     ///
-    /// Takes self by value to consume the transaction
-    async fn commit(self) -> Result<(), DatabaseError>;
+    /// Takes `self` by value to consume the transaction.
+    /// Returns boxed future for consistency.
+    fn commit(self) -> Pin<Box<dyn Future<Output = Result<(), DatabaseError>> + Send + 'static>>;
 
-    /// Rollback this transaction (implicit via Drop if not called)
-    async fn rollback(&self) -> Result<(), DatabaseError> {
-        // Default: do nothing, relies on Drop
-        Ok(())
+    /// Rollback this transaction
+    ///
+    /// Default implementation does nothing (relies on Drop).
+    fn rollback(self) -> Pin<Box<dyn Future<Output = Result<(), DatabaseError>> + Send + 'static>>
+    where
+        Self: Sized,
+    {
+        Box::pin(async { Ok(()) })
     }
-    // fn commit(&self) -> Pin<Box<dyn Future<Output = Result<(), DatabaseError>> + Send + '_>>;
-    //  fn commit<T: ApplicationError>(&self) -> Pin<Box<dyn Future<Output = Result<(), T>> + Send>>;
 }

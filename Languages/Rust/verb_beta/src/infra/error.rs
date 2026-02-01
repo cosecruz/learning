@@ -1,9 +1,11 @@
 use thiserror::Error;
 
+use crate::infra::db::DatabaseError;
+
 /// Infrastructure errors
 #[derive(Debug, Error)]
-pub enum InfraError {
+pub enum InfrastructureError {
     // Database Error
-    // #[error("Database error: {0}")]
-    // Database(#[from] sqlx::Error),
+    #[error("Database error")]
+    Database(#[from] DatabaseError),
 }

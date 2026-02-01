@@ -1,9 +1,10 @@
 use tracing::{debug, error};
 
-use crate::{config::telemetry, error::AppResult};
+use crate::{bootstrap::bootstrap, config::telemetry, error::AppResult};
 
 mod api;
 mod application;
+mod bootstrap;
 mod config;
 mod domain;
 mod error;
@@ -32,12 +33,19 @@ async fn main() -> AppResult<()> {
     // endregion: telemetry
 
     // start server
-    if let Err(e) = server::start_server(&config).await {
-        error!(
-            error = %e,
-            "Server failed"
-        );
-        std::process::exit(1);
+    // if let Err(e) = server::start_server(&config).await {
+    //     error!(
+    //         error = %e,
+    //         "Server failed"
+    //     );
+    //     std::process::exit(1);
+    // }
+
+    //start bootstrap - for testing and prototyping
+    if let Err(e) = bootstrap().await {
+        error!(error = %e,
+        "Bootstrap failed");
+        std::process::exit(1)
     }
 
     Ok(())
