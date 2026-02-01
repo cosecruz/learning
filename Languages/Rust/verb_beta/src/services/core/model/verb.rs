@@ -49,10 +49,10 @@ impl Title {
     fn new(value: impl Into<String>) -> Result<Self, CoreError> {
         let v = value.into().trim().to_string();
         if v.is_empty() {
-            return Err(CoreError::EmptyTitle);
+            return Err(CoreError::VerbEmptyTitle);
         }
         if v.len() > 200 {
-            return Err(CoreError::TitleTooLong);
+            return Err(CoreError::VerbTitleTooLong);
         }
         Ok(Self(v))
     }
@@ -71,7 +71,7 @@ impl Description {
     fn new(value: impl Into<String>) -> Result<Self, CoreError> {
         let v = value.into();
         if v.len() > 2000 {
-            return Err(CoreError::DescriptionTooLong);
+            return Err(CoreError::VerbDescriptionTooLong);
         }
         Ok(Self(v))
     }
@@ -191,7 +191,7 @@ impl VerbState {
             "Paused" => Ok(VerbState::Paused),
             "Done" => Ok(VerbState::Done),
             "Dropped" => Ok(VerbState::Dropped),
-            _ => Err(CoreError::InvalidState(s.to_string())),
+            _ => Err(CoreError::VerbInvalidState(s.to_string())),
         }
     }
 }
@@ -284,7 +284,7 @@ mod tests {
     #[test]
     fn rejects_empty_title() {
         let result = Verb::new("", "Desc");
-        assert!(matches!(result, Err(CoreError::EmptyTitle)));
+        assert!(matches!(result, Err(CoreError::VerbEmptyTitle)));
     }
 
     #[test]

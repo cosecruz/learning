@@ -1,23 +1,38 @@
-use crate::domain::{
-    error::DomainError,
-    model::{ActionLog, Verb, VerbId, VerbState},
+use std::pin::Pin;
+
+use crate::{
+    application::ApplicationError,
+    domain::model::{Verb, VerbId, VerbState},
 };
 
 // ==================================================
 // VERB REPOSITORY TRAIT
 // ==================================================
+/// PORT: What the domain needs from verb persistence
+///
+/// ## Why Pin<Box<dyn Future>>?
+/// - Domain layer is agnostic to async implementation
+/// - Repositories are used behind `&dyn VerbRepository`
+/// - `async fn` would make trait NOT object-safe
+/// - Boxed futures maintain object safety
 pub trait VerbRepository: Send + Sync {
-    ///Create a new verb and its initial action log atomically
-    async fn create(&self, verb: &Verb, action_log: &ActionLog) -> Result<(), DomainError>;
+    /// Store a verb
+    fn save(
+        &self,
+        verb: &Verb,
+    ) -> Pin<Box<dyn Future<Output = Result<(), ApplicationError>> + Send + '_>>;
 
-    /// Get verb by ID
-    async fn get_by_id(&self, id: VerbId) -> Result<Option<Verb>, DomainError>;
+    /// Retrieve verb by ID
+    fn find_by_id(
+        &self,
+        id: VerbId,
+    ) -> Pin<Box<dyn Future<Output = Result<Option<Verb>, ApplicationError>> + Send + '_>>;
 
     /// List verbs with optional filtering
-    async fn list(&self, filter: VerbFilter) -> Result<VerbListResult, DomainError>;
-
-    /// Update verb state and append action log atomically
-    async fn update_state(&self, verb: &Verb, action_log: &ActionLog) -> Result<(), DomainError>;
+    fn list(
+        &self,
+        filter: VerbFilter,
+    ) -> Pin<Box<dyn Future<Output = Result<VerbListResult, ApplicationError>> + Send + '_>>;
 }
 
 // ============================================================================
@@ -65,5 +80,5 @@ impl VerbFilter {
 #[derive(Debug, Clone)]
 pub struct VerbListResult {
     pub verbs: Vec<Verb>,
-    pub total: i64,
+    pub total: u32,
 }

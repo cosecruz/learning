@@ -22,13 +22,13 @@ pub enum CoreError {
 
     // Validation errors
     #[error("Title cannot be empty")]
-    EmptyTitle,
+    VerbEmptyTitle,
 
     #[error("Title cannot exceed 200 characters")]
-    TitleTooLong,
+    VerbTitleTooLong,
 
     #[error("Description cannot exceed 2000 characters")]
-    DescriptionTooLong,
+    VerbDescriptionTooLong,
 
     #[error("Reason cannot exceed 500 characters")]
     ReasonTooLong,
@@ -45,5 +45,5 @@ pub enum CoreError {
     // #[error("Database error: {0}")]
     // Database(#[from] sqlx::Error),
     #[error("Invalid state value: {0}")]
-    InvalidState(String),
+    VerbInvalidState(String),
 }
