@@ -87,11 +87,15 @@ impl VerbRepository for InMemoryVerbRepo {
             let total: u32 = verbs.len() as u32;
 
             // Pagination (convert domain types → infra types)
-            let offset = filter.offset as usize;
-            let limit = filter.limit as usize;
+            let offset = filter.offset as u32;
+            let limit = filter.limit as u32;
 
             // Pagination
-            let verbs: Vec<Verb> = verbs.into_iter().skip(offset).take(limit).collect();
+            let verbs: Vec<Verb> = verbs
+                .into_iter()
+                .skip(offset as usize)
+                .take(limit as usize)
+                .collect();
 
             Ok(VerbListResult { verbs, total })
         })

@@ -1,41 +1,50 @@
 use axum::{Json, extract::State};
-use serde::{Deserialize, Serialize};
+use tracing::instrument;
+use validator::Validate;
 
-use crate::api::AppState;
+use crate::{
+    api::{
+        AppState,
+        dto::{ApiResponse, CreateVerbRequest, ErrorCode, VerbResponse},
+    },
+    infra::db::Database,
+};
 
+/// Handler: Create a new verb
 ///
-///
-///CreateVerb
-#[derive(Debug, Clone, Deserialize)]
-pub struct CreateVerb {
-    pub name: String,
-    pub email: String,
-}
+/// ## Flow
+/// 1. Validate request DTO
+/// 2. Call application facade
+/// 3. Convert domain entity to response DTO
+/// 4. Return HTTP response
+#[instrument(skip(state), fields(title = %payload.title))]
+pub async fn create_verb<D: Database>(
+    State(state): State<AppState<D>>,
+    Json(payload): Json<CreateVerbRequest>,
+) -> ApiResponse<VerbResponse> {
+    // Step 1: Validate input
+    if let Err(validation_errors) = payload.validate() {
+        return ApiResponse::error(
+            ErrorCode::ValidationError,
+            format!("Validation failed: {}", validation_errors),
+        );
+    }
 
-/// Verb
-#[derive(Debug, Serialize)]
-pub struct Verb {
-    id: u64,
-    name: String,
-    email: String,
-}
+    // Step 2: Call application layer
+    let description = payload.description.unwrap_or_default();
 
-///Handlers for routes
-///
-pub async fn create_verb(
-    // Json(payload): Json<CreateVerb>,
-    State(_state): State<AppState>,
-) -> Json<Verb> {
-    // prototype
-    // let verb = Verb {
-    //     id: 1,
-    //     name: payload.name,
-    //     email: payload.email,
-    // };
-
-    Json(Verb {
-        id: 1,
-        name: "".into(),
-        email: "".into(),
-    })
+    match state
+        .verb_facade
+        .create_verb(payload.title, description)
+        .await
+    {
+        Ok(verb) => {
+            tracing::info!(verb_id = %verb.id(), "Verb created successfully");
+            ApiResponse::ok(VerbResponse::from(verb))
+        }
+        Err(e) => {
+            tracing::error!(error = %e, "Failed to create verb");
+            ApiResponse::error(ErrorCode::InternalError, e.to_string())
+        }
+    }
 }

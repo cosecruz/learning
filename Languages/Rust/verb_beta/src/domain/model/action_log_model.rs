@@ -1,3 +1,5 @@
+use std::fmt;
+
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 use uuid::Uuid;
@@ -19,6 +21,12 @@ impl ActionLogId {
 
     pub fn as_uuid(&self) -> Uuid {
         self.0
+    }
+}
+
+impl fmt::Display for ActionLogId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 
