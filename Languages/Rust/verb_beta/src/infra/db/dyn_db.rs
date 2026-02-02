@@ -30,7 +30,7 @@
 //     fn find_by_verb(
 //         &self,
 //         verb_id: crate::domain::model::VerbId,
-//         limit: usize,
+//         limit: u32,
 //     ) -> Result<Vec<crate::domain::model::ActionLog>, DomainError>;
 // }
 
@@ -124,7 +124,7 @@
 //     fn find_by_verb(
 //         &self,
 //         verb_id: crate::domain::model::VerbId,
-//         limit: usize,
+//         limit: u32,
 //     ) -> Result<Vec<crate::domain::model::ActionLog>, DomainError> {
 //         ActionLogRepository::find_by_verb(self, verb_id, limit)
 //     }

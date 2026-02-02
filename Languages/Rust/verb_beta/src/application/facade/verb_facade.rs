@@ -3,11 +3,13 @@ use std::sync::Arc;
 use crate::{
     application::{
         ApplicationError,
-        use_cases::{CreateVerbUseCase, ListVerbsUseCase, TransitionVerbUseCase},
+        use_cases::{
+            CreateVerbUseCase, GetVerbActionLogs, ListVerbsUseCase, TransitionVerbUseCase,
+        },
     },
     domain::{
-        model::{Verb, VerbId, VerbState},
-        repository::verb_repo::VerbFilter,
+        model::{ActionLog, Verb, VerbId, VerbState},
+        repository::{action_log_repo::ActionLogListResult, verb_repo::VerbFilter},
     },
     infra::db::{Database, DatabaseTransaction},
 };
@@ -26,6 +28,7 @@ pub struct VerbFacade<D: Database> {
     create_use_case: CreateVerbUseCase<D>,
     transition_use_case: TransitionVerbUseCase<D>,
     list_use_case: ListVerbsUseCase<D>,
+    list_verb_logs_use_case: GetVerbActionLogs<D>,
 }
 
 impl<D: Database> VerbFacade<D> {
@@ -35,6 +38,7 @@ impl<D: Database> VerbFacade<D> {
             create_use_case: CreateVerbUseCase::new(Arc::clone(&db)),
             transition_use_case: TransitionVerbUseCase::new(Arc::clone(&db)),
             list_use_case: ListVerbsUseCase::new(Arc::clone(&db)),
+            list_verb_logs_use_case: GetVerbActionLogs::new(Arc::clone(&db)),
         }
     }
 
@@ -82,6 +86,19 @@ impl<D: Database> VerbFacade<D> {
             .map_err(ApplicationError::from_infra)?
             .ok_or(ApplicationError::NotFound)
     }
+
+    ///Get action logs for a single verb
+    pub async fn get_verb_action_logs(
+        &self,
+        verb_id: VerbId,
+        limit: Option<u32>,
+    ) -> Result<ActionLogListResult, ApplicationError> {
+        let limit = limit.unwrap_or(5);
+        let result = self.list_verb_logs_use_case.execute(verb_id, limit).await?;
+        Ok(result)
+    }
+
+    // Get all logs
 }
 
 impl<D: Database> Clone for VerbFacade<D> {
@@ -92,6 +109,9 @@ impl<D: Database> Clone for VerbFacade<D> {
                 &self.transition_use_case.db,
             )),
             list_use_case: ListVerbsUseCase::new(Arc::clone(&self.list_use_case.db)),
+            list_verb_logs_use_case: GetVerbActionLogs::new(Arc::clone(
+                &self.list_verb_logs_use_case.db,
+            )),
         }
     }
 }

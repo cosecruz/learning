@@ -1,38 +1,16 @@
-use axum::{
-    Json,
-    extract::{Path, State},
-};
-
-use super::AppState;
-
 mod create_verb;
-pub(super) use create_verb::create_verb;
+mod drop_verb;
+mod get_logs;
+mod get_verb;
+mod list_verbs;
+mod update_state;
 
-pub async fn list_verbs(State(_state): State<AppState>) -> Json<&'static str> {
-    Json("list all verbs")
-}
-
-pub async fn get_verb(Path(id): Path<u64>, State(_state): State<AppState>) -> Json<&'static str> {
-    Json("get single verb")
-}
-
-pub async fn update_verb(
-    Path(id): Path<u64>,
-    State(_state): State<AppState>,
-) -> Json<&'static str> {
-    Json("update verb")
-}
-
-pub async fn delete_verb(
-    Path(id): Path<u64>,
-    State(_state): State<AppState>,
-) -> Json<&'static str> {
-    Json("delete verb")
-}
-
-pub async fn verb_logs(Path(id): Path<u64>, State(_state): State<AppState>) -> Json<&'static str> {
-    Json("verb logs")
-}
+pub use create_verb::create_verb;
+pub use drop_verb::drop_verb;
+pub use get_logs::get_verb_logs;
+pub use get_verb::get_verb;
+pub use list_verbs::list_verbs;
+pub use update_state::update_verb_state;
 
 // Built-in extractors:
 // Extractor            What It Extracts

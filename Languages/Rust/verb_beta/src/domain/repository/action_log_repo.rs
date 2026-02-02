@@ -1,4 +1,4 @@
-use std::{error::Error, pin::Pin};
+use std::pin::Pin;
 
 use crate::{
     application::ApplicationError,
@@ -19,6 +19,19 @@ pub trait ActionLogRepository: Send + Sync {
     fn find_by_verb(
         &self,
         verb_id: VerbId,
-        limit: usize,
+        limit: u32,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<ActionLog>, ApplicationError>> + Send + '_>>;
 }
+
+#[derive(Debug, Clone)]
+pub struct ActionLogListResult {
+    pub action_logs: Vec<ActionLog>,
+    pub total: u32,
+}
+
+// #[derive(Debug, Clone)]
+// pub struct ActionLogFilter {
+//     pub verb_id: ,
+//     pub limit: u32,
+//     pub offset: u32,
+// }

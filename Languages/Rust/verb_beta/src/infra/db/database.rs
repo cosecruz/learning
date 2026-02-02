@@ -22,7 +22,7 @@ use crate::{
 /// - No `Self: Sized` methods
 /// - No generic methods
 /// - Associated type has `where Self: 'tx` bounds
-pub trait Database: Send + Sync + 'static {
+pub trait Database: Clone + Send + Sync + 'static {
     /// The transaction type for this database
     ///
     /// GAT allows each implementation to specify its concrete transaction type.

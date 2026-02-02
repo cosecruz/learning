@@ -40,7 +40,7 @@ impl ActionLogRepository for InMemoryActionLogRepo {
     fn find_by_verb(
         &self,
         verb_id: VerbId,
-        limit: usize,
+        limit: u32,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<ActionLog>, ApplicationError>> + Send + '_>> {
         let store = Arc::clone(&self.store);
 
@@ -57,7 +57,7 @@ impl ActionLogRepository for InMemoryActionLogRepo {
             logs.sort_by(|a, b| b.timestamp().cmp(&a.timestamp()));
 
             // Limit
-            logs.truncate(limit);
+            logs.truncate(limit as usize);
 
             Ok(logs)
         })
