@@ -1,47 +1,34 @@
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use serde::Serialize;
 use tracing::instrument;
 
 use crate::{
     api::{
         AppState,
-        dto::{ApiResponse, ErrorCode},
+        dto::{ActionLogResponse, ApiResponse, ErrorCode, GetActionLogsResponse, GetLogsQuery},
     },
-    domain::model::{ActionLog, VerbId},
+    domain::{
+        model::{ActionLog, VerbId},
+        repository::action_log_repo::{ActionLogFilter, ActionLogListResult},
+    },
     infra::db::Database,
 };
-
-#[derive(Debug, Serialize)]
-pub struct ActionLogResponse {
-    pub id: String,
-    pub verb_id: String,
-    pub action_type: String,
-    pub from_state: Option<String>,
-    pub to_state: String,
-    pub reason: Option<String>,
-    pub timestamp: String,
-}
-
-impl From<ActionLog> for ActionLogResponse {
-    fn from(log: ActionLog) -> Self {
-        Self {
-            id: log.id().to_string(),
-            verb_id: log.verb_id().to_string(),
-            action_type: log.action_type().as_str().to_string(),
-            from_state: log.from_state().map(|s| s.as_str().to_string()),
-            to_state: log.to_state().as_str().to_string(),
-            reason: log.reason().map(|s| s.to_string()),
-            timestamp: log.timestamp().to_string(),
-        }
-    }
-}
 
 /// Handler: Get action logs for a verb
 #[instrument(skip(state), fields(verb_id = %id))]
 pub async fn get_verb_logs<D: Database>(
     Path(id): Path<String>,
+    Query(query): Query<GetLogsQuery>,
     State(state): State<AppState<D>>,
-) -> ApiResponse<Vec<ActionLogResponse>> {
+) -> ApiResponse<GetActionLogsResponse> {
+    // Convert DTO query to domain filter
+    let filter = ActionLogFilter {
+        state: query.state.map(Into::into),
+        // FIXME: limit not working from query
+        limit: query.limit.unwrap_or(50),
+        offset: query.offset.unwrap_or(0),
+    };
+
     // Parse verb ID
     let verb_id = match id.parse::<VerbId>() {
         Ok(id) => id,
@@ -50,43 +37,40 @@ pub async fn get_verb_logs<D: Database>(
         }
     };
 
-    match state.verb_facade.get_verb_action_logs(verb_id, None).await {
-        Ok(logs) => {
-            let log_res = logs
-                .action_logs
-                .into_iter()
-                .map(ActionLogResponse::from)
-                .collect();
+    // find verb by id
+    match state.verb_facade.get_verb(verb_id).await {
+        // if verb exists then get logs
+        Ok(verb) => {
+            match state
+                .verb_facade
+                .get_verb_action_logs(verb.id(), &filter)
+                .await
+            {
+                Ok(logs) => {
+                    let log_res = GetActionLogsResponse {
+                        action_logs: logs
+                            .action_logs
+                            .into_iter()
+                            .map(ActionLogResponse::from)
+                            .collect(),
+                        total: logs.total,
+                        limit: filter.limit,
+                        offset: filter.offset,
+                    };
 
-            ApiResponse::ok(log_res)
+                    ApiResponse::ok(log_res)
+                }
+                Err(e) => {
+                    tracing::error!(error = %e, "Failed to get action logs");
+                    ApiResponse::error(ErrorCode::InternalError, "Failed to retrieve logs")
+                    //             }
+                }
+            }
         }
+        // else: if it does not exists
         Err(e) => {
-            tracing::error!(error = %e, "Failed to get action logs");
-            ApiResponse::error(ErrorCode::InternalError, "Failed to retrieve logs")
-            //             }
+            tracing::error!(error=%e, "Failed to find verb");
+            ApiResponse::error(ErrorCode::NotFound, "Verb not found")
         }
     }
-
-    // Get transaction and repository
-    // match state.verb_facade.db.begin_tx().await {
-    //     Ok(tx) => {
-    //         let log_repo = tx.action_log_repository();
-
-    //         match log_repo.find_by_verb(verb_id, 100).await {
-    //             Ok(logs) => {
-    //                 let responses: Vec<ActionLogResponse> =
-    //                     logs.into_iter().map(ActionLogResponse::from).collect();
-    //                 ApiResponse::ok(responses)
-    //             }
-    //             Err(e) => {
-    //                 tracing::error!(error = %e, "Failed to get action logs");
-    //                 ApiResponse::error(ErrorCode::InternalError, "Failed to retrieve logs")
-    //             }
-    //         }
-    //     }
-    //     Err(e) => {
-    //         tracing::error!(error = %e, "Failed to begin transaction");
-    //         ApiResponse::error(ErrorCode::InternalError, "Database error")
-    //     }
-    // }
 }

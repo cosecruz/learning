@@ -22,8 +22,8 @@ pub async fn list_verbs<D: Database>(
     // Convert DTO query to domain filter
     let filter = VerbFilter {
         state: query.state.map(Into::into),
-        limit: query.limit.unwrap_or(50) as u32,
-        offset: query.offset.unwrap_or(0) as u32,
+        limit: query.limit.unwrap_or(50),
+        offset: query.offset.unwrap_or(0),
     };
 
     let filter1 = filter.clone();

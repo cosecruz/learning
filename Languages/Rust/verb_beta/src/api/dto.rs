@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use validator::Validate;
 
-use crate::domain::model::{Verb, VerbId, VerbState};
+use crate::domain::model::{ActionLog, ActionType, Verb, VerbId, VerbState};
 
 // ==================================================
 // Request DTOs
@@ -44,6 +44,27 @@ pub struct ListVerbsQuery {
 }
 
 impl Default for ListVerbsQuery {
+    fn default() -> Self {
+        Self {
+            state: None,
+            limit: Some(50),
+            offset: Some(0),
+        }
+    }
+}
+
+///Query Params for getting logs by verb_id
+#[derive(Debug, Deserialize, Validate)]
+pub struct GetLogsQuery {
+    pub state: Option<ActionTypeDTO>,
+
+    #[validate(range(min = 1, max = 50))]
+    pub limit: Option<u32>,
+
+    pub offset: Option<u32>,
+}
+
+impl Default for GetLogsQuery {
     fn default() -> Self {
         Self {
             state: None,
@@ -92,6 +113,41 @@ impl From<VerbStateDTO> for VerbState {
     }
 }
 
+///Action Type DTO
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+#[serde(rename_all = "snake_case")]
+pub enum ActionTypeDTO {
+    Created,
+    Activated,
+    Paused,
+    Completed,
+    Dropped,
+}
+
+impl From<ActionType> for ActionTypeDTO {
+    fn from(value: ActionType) -> Self {
+        match value {
+            ActionType::Created => ActionTypeDTO::Created,
+            ActionType::Activated => ActionTypeDTO::Activated,
+            ActionType::Paused => ActionTypeDTO::Paused,
+            ActionType::Completed => ActionTypeDTO::Completed,
+            ActionType::Dropped => ActionTypeDTO::Dropped,
+        }
+    }
+}
+
+impl From<ActionTypeDTO> for ActionType {
+    fn from(value: ActionTypeDTO) -> Self {
+        match value {
+            ActionTypeDTO::Created => ActionType::Created,
+            ActionTypeDTO::Activated => ActionType::Activated,
+            ActionTypeDTO::Paused => ActionType::Paused,
+            ActionTypeDTO::Completed => ActionType::Completed,
+            ActionTypeDTO::Dropped => ActionType::Dropped,
+        }
+    }
+}
+
 /// Verb response DTO
 #[derive(Debug, Serialize)]
 pub struct VerbResponse {
@@ -120,6 +176,39 @@ impl From<Verb> for VerbResponse {
 #[derive(Debug, Serialize)]
 pub struct ListVerbsResponse {
     pub verbs: Vec<VerbResponse>,
+    pub total: u32,
+    pub limit: u32,
+    pub offset: u32,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ActionLogResponse {
+    pub id: String,
+    pub verb_id: String,
+    pub action_type: String,
+    pub from_state: Option<String>,
+    pub to_state: String,
+    pub reason: Option<String>,
+    pub timestamp: String,
+}
+
+impl From<ActionLog> for ActionLogResponse {
+    fn from(log: ActionLog) -> Self {
+        Self {
+            id: log.id().to_string(),
+            verb_id: log.verb_id().to_string(),
+            action_type: log.action_type().as_str().to_string(),
+            from_state: log.from_state().map(|s| s.as_str().to_string()),
+            to_state: log.to_state().as_str().to_string(),
+            reason: log.reason().map(|s| s.to_string()),
+            timestamp: log.timestamp().to_string(),
+        }
+    }
+}
+///List of Action logs response
+#[derive(Debug, Serialize)]
+pub struct GetActionLogsResponse {
+    pub action_logs: Vec<ActionLogResponse>,
     pub total: u32,
     pub limit: u32,
     pub offset: u32,

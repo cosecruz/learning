@@ -48,6 +48,7 @@ pub async fn update_verb_state<D: Database>(
                 new_state = ?verb.state(),
                 "Verb state updated"
             );
+            //FIXME: This is stale when i update to paused i get no new response on postman?
             ApiResponse::ok(VerbResponse::from(verb))
         }
         Err(e) => {

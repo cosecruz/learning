@@ -5,6 +5,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use crate::application::ApplicationError;
+use crate::domain::repository::action_log_repo::ActionLogFilter;
 use crate::domain::{
     model::{ActionLog, VerbId},
     repository::ActionLogRepository,
@@ -37,27 +38,42 @@ impl ActionLogRepository for InMemoryActionLogRepo {
         })
     }
 
+    ///Use find by verb with filters
     fn find_by_verb(
         &self,
         verb_id: VerbId,
-        limit: u32,
+        filter: &ActionLogFilter,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<ActionLog>, ApplicationError>> + Send + '_>> {
         let store = Arc::clone(&self.store);
-
+        let filter = filter.clone();
         Box::pin(async move {
             let guard = store.lock().await;
 
             let mut logs: Vec<ActionLog> = guard
                 .iter()
                 .filter(|log| log.verb_id() == verb_id)
+                .filter(|log| {
+                    if let Some(state) = filter.state {
+                        log.action_type() == state
+                    } else {
+                        true
+                    }
+                })
                 .cloned()
                 .collect();
 
+            drop(guard); // release lock early (important for async systems)
+
             // Sort by timestamp desc
-            logs.sort_by(|a, b| b.timestamp().cmp(&a.timestamp()));
+            logs.sort_by_key(|b| std::cmp::Reverse(b.timestamp()));
 
             // Limit
-            logs.truncate(limit as usize);
+            // logs.truncate(filter.limit as usize);
+            // Step 3: pagination
+            let offset = filter.offset as usize;
+            let limit = filter.limit as usize;
+
+            let logs = logs.into_iter().skip(offset).take(limit).collect();
 
             Ok(logs)
         })

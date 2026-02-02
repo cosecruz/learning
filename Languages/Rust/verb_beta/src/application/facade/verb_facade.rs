@@ -8,8 +8,11 @@ use crate::{
         },
     },
     domain::{
-        model::{ActionLog, Verb, VerbId, VerbState},
-        repository::{action_log_repo::ActionLogListResult, verb_repo::VerbFilter},
+        model::{Verb, VerbId, VerbState},
+        repository::{
+            action_log_repo::{ActionLogFilter, ActionLogListResult},
+            verb_repo::VerbFilter,
+        },
     },
     infra::db::{Database, DatabaseTransaction},
 };
@@ -91,10 +94,12 @@ impl<D: Database> VerbFacade<D> {
     pub async fn get_verb_action_logs(
         &self,
         verb_id: VerbId,
-        limit: Option<u32>,
+        filter: &ActionLogFilter,
     ) -> Result<ActionLogListResult, ApplicationError> {
-        let limit = limit.unwrap_or(5);
-        let result = self.list_verb_logs_use_case.execute(verb_id, limit).await?;
+        let result = self
+            .list_verb_logs_use_case
+            .execute(verb_id, filter)
+            .await?;
         Ok(result)
     }
 

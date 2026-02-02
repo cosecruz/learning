@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 use uuid::Uuid;
 
+use crate::domain::DomainError;
+
 use super::{VerbId, VerbState};
 
 /// Strongly-typed ActionLog identifier
@@ -63,6 +65,35 @@ impl ActionType {
             ActionType::Paused => "Paused",
             ActionType::Completed => "Completed",
             ActionType::Dropped => "Dropped",
+        }
+    }
+
+    pub fn from_str(s: &str) -> Result<Self, DomainError> {
+        match s {
+            "Created" => Ok(ActionType::Created),
+            "Activated" => Ok(ActionType::Activated),
+            "Paused" => Ok(ActionType::Paused),
+            "Completed" => Ok(ActionType::Completed),
+            "Dropped" => Ok(ActionType::Dropped),
+            _ => Err(DomainError::VerbInvalidState(s.to_string())),
+        }
+    }
+}
+
+impl fmt::Display for ActionType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl From<VerbState> for ActionType {
+    fn from(value: VerbState) -> Self {
+        match value {
+            VerbState::Captured => ActionType::Created,
+            VerbState::Active => ActionType::Activated,
+            VerbState::Paused => ActionType::Paused,
+            VerbState::Done => ActionType::Completed,
+            VerbState::Dropped => ActionType::Dropped,
         }
     }
 }

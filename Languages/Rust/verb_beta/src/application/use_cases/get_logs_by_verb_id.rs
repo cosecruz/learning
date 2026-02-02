@@ -2,7 +2,10 @@ use std::sync::Arc;
 
 use crate::{
     application::ApplicationError,
-    domain::{model::VerbId, repository::action_log_repo::ActionLogListResult},
+    domain::{
+        model::VerbId,
+        repository::action_log_repo::{ActionLogFilter, ActionLogListResult},
+    },
     infra::db::{Database, DatabaseTransaction},
 };
 
@@ -19,7 +22,7 @@ impl<D: Database> GetVerbActionLogs<D> {
     pub async fn execute(
         &self,
         verb_id: VerbId,
-        limit: u32,
+        filter: &ActionLogFilter,
     ) -> Result<ActionLogListResult, ApplicationError> {
         // Begin transaction (even for reads - ensures consistent snapshot)
         let tx = self
@@ -31,7 +34,7 @@ impl<D: Database> GetVerbActionLogs<D> {
         let action_log_repo = tx.action_log_repository();
 
         // Execute Query (async)
-        let result = action_log_repo.find_by_verb(verb_id, limit).await?;
+        let result = action_log_repo.find_by_verb(verb_id, filter).await?;
 
         // No explicit commit needed for read-only
         // Transaction will be dropped (rolled back implicitly)
