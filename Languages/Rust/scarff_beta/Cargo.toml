@@ -1,0 +1,21 @@
+[workspace]
+members = ["crates/*"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+authors = ["Obiechi Ebuka Samuel oesisu@outlook.com"]
+repository = ""
+license = ""
+
+[workspace.dependencies]
+anyhow = "1.0.100"
+thiserror = "2.0.18"
+
+
+[profile.release]
+opt-level = 3
+lto = "fat"       #full link time optimization for performance
+codegen-units = 1 # better optimization at the cost of compile time;
+panic = "abort"
