@@ -3,10 +3,7 @@ use thiserror::Error;
 // errors: domain specific errors
 #[derive(Debug, Error)]
 pub enum DomainError {
-    // target
-    #[error("language not supported")]
-    LanguageNotSupported,
-
+    /// target model errors
     #[error("framework `{framework}` does not support language `{language}`")]
     FrameworkLanguageMismatch { framework: String, language: String },
 
@@ -15,7 +12,13 @@ pub enum DomainError {
         framework: String,
         project_type: String,
     },
+
+    #[error("error inferring defaults")]
+    CannotInfer,
+
     // template
     // project_structure
-    // shared
+    // shared errors
+    #[error("not supported")]
+    NotSupported,
 }

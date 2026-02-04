@@ -4,7 +4,7 @@
 //! - template: template specific business logic
 //! - scaffold: core domain layer orchestration, orchestrates business logic
 
-mod domain;
+pub mod domain;
 mod scaffold;
 mod template;
 
