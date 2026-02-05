@@ -1,5 +1,5 @@
 [package]
-name = "scarf-core"
+name = "scarff-core"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -9,3 +9,4 @@ license.workspace = true
 [dependencies]
 anyhow.workspace = true
 thiserror.workspace = true
+uuid.workspace = true
