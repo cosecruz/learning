@@ -1,0 +1,9 @@
+[package]
+name = "rust_cli"
+version = "0.1.0"
+edition = "2024"
+authors = ["scarff team"]
+repository = ""
+license = ""
+
+[dependencies]

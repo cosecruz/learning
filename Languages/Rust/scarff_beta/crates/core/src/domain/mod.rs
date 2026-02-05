@@ -21,7 +21,7 @@ pub use project_structure::{DirectoryToCreate, FileToWrite, FsEntry, ProjectStru
 pub use render_context::RenderContext;
 pub use target::{
     Architecture, Framework, HasLanguage, Language, NoLanguage, ProjectType, PythonFramework,
-    RustFramework, Target, TargetBuilder, TypeScriptFramework,
+    RustFramework, Target, TypeScriptFramework,
 };
 pub use template::{
     ContentTemplateId, DirectorySpec, FileSpec, TargetMatcher, Template, TemplateContent,

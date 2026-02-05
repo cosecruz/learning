@@ -248,13 +248,13 @@ impl TargetBuilder<HasLanguage> {
         }
 
         // Check architecture-framework compatibility (if framework present)
-        if let Some(fw) = framework {
-            if !architecture.supports_framework(fw) {
-                return Err(DomainError::ArchitectureFrameworkMismatch {
-                    architecture: architecture.into(),
-                    framework: fw.into(),
-                });
-            }
+        if let Some(fw) = framework
+            && !architecture.supports_framework(fw)
+        {
+            return Err(DomainError::ArchitectureFrameworkMismatch {
+                architecture: architecture.into(),
+                framework: fw.into(),
+            });
         }
 
         Ok(())

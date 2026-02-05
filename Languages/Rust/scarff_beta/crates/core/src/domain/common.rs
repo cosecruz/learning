@@ -112,8 +112,8 @@ mod tests {
 
     #[test]
     fn file_permissions_defaults() {
-        assert!(!FilePermissions::DEFAULT.executable);
-        assert!(FilePermissions::EXECUTABLE.executable);
+        const { assert!(!FilePermissions::DEFAULT.executable) };
+        const { assert!(FilePermissions::EXECUTABLE.executable) };
         assert_eq!(FilePermissions::default(), FilePermissions::DEFAULT);
     }
 
