@@ -21,7 +21,7 @@ use super::DomainError;
 /// - Architecture is resolved and compatible
 ///
 /// Cannot be constructed directly - use `TargetBuilder`.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Target {
     pub language: Language,
     pub project_type: ProjectType,
@@ -35,6 +35,25 @@ impl Target {
         TargetBuilder::new()
     }
 }
+
+// Add this
+impl fmt::Display for Target {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{} {} ({}{})",
+            self.language,
+            self.project_type,
+            self.architecture,
+            self.framework
+                .as_ref()
+                .map(|fw| format!(" + {}", fw))
+                .unwrap_or_default()
+        )
+    }
+}
+
+// Example output: "rust backend (layered + axum)"
 
 // endregion: Target
 
@@ -136,13 +155,13 @@ impl TargetBuilder<HasLanguage> {
             .expect("HasLanguage state guarantees language is set");
 
         // Step 1: Early validation - framework-language compatibility
-        if let Some(ref fw) = self.framework {
-            if fw.language() != language {
-                return Err(DomainError::FrameworkLanguageMismatch {
-                    framework: fw.into(),
-                    language: language.into(),
-                });
-            }
+        if let Some(ref fw) = self.framework
+            && fw.language() != language
+        {
+            return Err(DomainError::FrameworkLanguageMismatch {
+                framework: fw.into(),
+                language: language.into(),
+            });
         }
 
         // Step 2: Resolve project type

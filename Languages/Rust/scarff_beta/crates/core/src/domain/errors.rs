@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use thiserror::Error;
 
 /// Domain-specific errors for Scarff's core types.
@@ -95,8 +97,17 @@ pub enum DomainError {
     // Template errors (placeholder for future use)
     // ========================================================================
     /// Template-related errors (to be expanded)
-    #[error("Template error: {0}")]
-    TemplateError(String),
+    #[error("Template {template_id:?} has no files or directories")]
+    TemplateEmptyTree { template_id: String },
+
+    #[error("Template '{template_id:?}' has duplicate path: {path:?}")]
+    TemplateDuplicatePath { template_id: String, path: PathBuf },
+
+    #[error("Template '{template_id:?}' contains absolute path: {path:?}")]
+    TemplateAbsolutePath { template_id: String, path: PathBuf },
+
+    #[error("Template '{template_id:?}' is invalid: {reason:?}")]
+    InvalidTemplate { template_id: String, reason: String },
 
     // ========================================================================
     // ProjectStructure errors (placeholder for future use)
