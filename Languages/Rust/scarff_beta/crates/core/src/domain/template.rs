@@ -157,10 +157,10 @@ impl TargetMatcher {
     ///
     /// All fields must match exactly.
     pub fn matches(&self, target: &Target) -> bool {
-        self.language == target.language
-            && self.framework == target.framework
-            && self.project_type == target.project_type
-            && self.architecture == target.architecture
+        self.language == *target.language()
+            && self.framework == target.framework().copied()
+            && self.project_type == *target.project_type()
+            && self.architecture == *target.architecture()
     }
 
     /// Calculate specificity score (higher = more specific).

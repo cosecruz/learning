@@ -15,7 +15,7 @@ pub mod target;
 pub mod template;
 
 // Re-export common types for convenience
-pub use common::{FilePermissions, RelativePath};
+pub(crate) use common::{FilePermissions, RelativePath};
 pub use errors::DomainError;
 pub use project_structure::{DirectoryToCreate, FileToWrite, FsEntry, ProjectStructure};
 pub use render_context::RenderContext;

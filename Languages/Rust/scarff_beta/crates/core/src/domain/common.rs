@@ -11,16 +11,16 @@ use std::path::{Path, PathBuf};
 ///
 /// Currently only tracks executable bit. Can be extended for full Unix permissions later.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct FilePermissions {
-    pub executable: bool,
+pub(crate) struct FilePermissions {
+    pub(crate) executable: bool,
 }
 
 impl FilePermissions {
     /// Default permissions: readable/writable, not executable
-    pub const DEFAULT: Self = Self { executable: false };
+    pub(crate) const DEFAULT: Self = Self { executable: false };
 
     /// Executable permissions: for scripts and binaries
-    pub const EXECUTABLE: Self = Self { executable: true };
+    pub(crate) const EXECUTABLE: Self = Self { executable: true };
 }
 
 impl Default for FilePermissions {
@@ -38,7 +38,7 @@ impl Default for FilePermissions {
 /// This wrapper prevents accidentally using absolute paths in templates
 /// or project structures, which would break portability.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RelativePath(PathBuf);
+pub(crate) struct RelativePath(PathBuf);
 
 impl RelativePath {
     /// Create a relative path.
@@ -46,7 +46,7 @@ impl RelativePath {
     /// # Panics
     ///
     /// Panics in debug builds if the path is absolute.
-    pub fn new(path: impl Into<PathBuf>) -> Self {
+    pub(crate) fn new(path: impl Into<PathBuf>) -> Self {
         let path = path.into();
         debug_assert!(
             !path.is_absolute(),
@@ -59,7 +59,7 @@ impl RelativePath {
     /// Try to create a relative path, returning error if absolute.
     ///
     /// This is the safe variant that doesn't panic.
-    pub fn try_new(path: impl Into<PathBuf>) -> Result<Self, PathBuf> {
+    pub(crate) fn try_new(path: impl Into<PathBuf>) -> Result<Self, PathBuf> {
         let path = path.into();
         if path.is_absolute() {
             Err(path)
@@ -69,17 +69,17 @@ impl RelativePath {
     }
 
     /// Get the inner PathBuf as a reference.
-    pub fn as_path(&self) -> &Path {
+    pub(crate) fn as_path(&self) -> &Path {
         &self.0
     }
 
     /// Convert into the inner PathBuf.
-    pub fn into_path_buf(self) -> PathBuf {
+    pub(crate) fn into_path_buf(self) -> PathBuf {
         self.0
     }
 
     /// Join this relative path with another path component.
-    pub fn join(&self, path: impl AsRef<Path>) -> Self {
+    pub(crate) fn join(&self, path: impl AsRef<Path>) -> Self {
         Self(self.0.join(path))
     }
 }

@@ -23,16 +23,36 @@ use super::DomainError;
 /// Cannot be constructed directly - use `TargetBuilder`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Target {
-    pub language: Language,
-    pub project_type: ProjectType,
-    pub framework: Option<Framework>,
-    pub architecture: Architecture,
+    language: Language,
+    project_type: ProjectType,
+    framework: Option<Framework>,
+    architecture: Architecture,
 }
 
 impl Target {
     /// Create a new builder to construct a Target.
     pub fn builder() -> TargetBuilder<NoLanguage> {
         TargetBuilder::new()
+    }
+
+    // ---------------------------------------------------------------------
+    // Getters
+    // ---------------------------------------------------------------------
+
+    pub fn language(&self) -> &Language {
+        &self.language
+    }
+
+    pub fn project_type(&self) -> &ProjectType {
+        &self.project_type
+    }
+
+    pub fn framework(&self) -> Option<&Framework> {
+        self.framework.as_ref()
+    }
+
+    pub fn architecture(&self) -> &Architecture {
+        &self.architecture
     }
 }
 
