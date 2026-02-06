@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::domain::TemplateId;
+use crate::domain::{Target, TemplateId};
 
 #[derive(Debug, Error)]
 pub enum TemplateError {
@@ -20,9 +20,10 @@ pub enum TemplateError {
 
     #[error("Store lock error")]
     LockError,
-    // Renderer Error
-    // Resolver Error
-}
 
-/// Result type for store operations
-pub type TemplateResult<T> = Result<T, TemplateError>;
+    // Renderer Error
+    /// Resolver Error
+    #[error("Resolve error: no match for target: {target:?}")]
+    NoMatch { target: Target },
+    // AmbiguousMatch { target: Target, count: usize },
+}
