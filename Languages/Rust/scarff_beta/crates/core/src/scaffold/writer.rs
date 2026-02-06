@@ -113,7 +113,7 @@ impl Writer for FileWriter {
                     directories = structure.directory_count(),
                     "Successfully wrote all files and directories"
                 );
-                let _ = Ok::<(), ScaffoldError>(());
+                Ok(())
             }
             Err(e) => {
                 warn!("Write operation failed, attempting rollback");
@@ -121,8 +121,6 @@ impl Writer for FileWriter {
                 Err(e).context("failed to write project structure to file system, rolled back")?
             }
         }
-
-        todo!()
     }
 }
 
