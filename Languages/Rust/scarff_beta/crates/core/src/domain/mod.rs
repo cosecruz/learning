@@ -4,26 +4,32 @@
 //! This module contains the core business types and logic:
 //! - Target: A validated project configuration
 //! - Template: A reusable project recipe
-//! - ProjectStructure: The output ready for writing
+//! - Project Structure: The output ready for writing
 //! - Common types: Shared utilities and types
 
-pub mod common;
-pub mod errors;
-pub mod project_structure;
-pub mod render_context;
-pub mod target;
-pub mod template;
+mod common;
+mod errors;
+mod project_structure;
+mod render_context;
+mod target;
+mod template;
 
 // Re-export common types for convenience
 pub(crate) use common::{FilePermissions, RelativePath};
-pub use errors::DomainError;
-pub use project_structure::{DirectoryToCreate, FileToWrite, FsEntry, ProjectStructure};
-pub use render_context::RenderContext;
-pub use target::{
-    Architecture, Framework, HasLanguage, Language, NoLanguage, ProjectType, PythonFramework,
-    RustFramework, Target, TypeScriptFramework,
+pub(crate) use errors::DomainError;
+
+// Re exporting project_structure
+pub(crate) use project_structure::{
+    FsEntry,
+    // project structure
+    ProjectStructure,
 };
-pub use template::{
-    ContentTemplateId, DirectorySpec, FileSpec, TargetMatcher, Template, TemplateContent,
-    TemplateId, TemplateMetadata, TemplateNode, TemplateTree,
+pub(crate) use render_context::RenderContext;
+pub use target::{
+    Architecture, Framework, Language, ProjectType, PythonFramework, RustFramework, Target,
+    TypeScriptFramework,
+};
+pub(crate) use template::{
+    DirectorySpec, FileSpec, TargetMatcher, Template, TemplateContent, TemplateId,
+    TemplateMetadata, TemplateNode, TemplateTree,
 };

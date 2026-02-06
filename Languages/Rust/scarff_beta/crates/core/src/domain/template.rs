@@ -2,8 +2,8 @@
 
 use crate::domain::DomainError;
 
-use super::common::{FilePermissions, RelativePath};
 use super::{Architecture, Framework, Language, ProjectType, Target};
+use crate::domain::{FilePermissions, RelativePath};
 
 // ============================================================================
 // Template
@@ -228,13 +228,13 @@ pub enum TemplateNode {
 /// Specification for a file in a template.
 #[derive(Debug, Clone)]
 pub struct FileSpec {
-    pub path: RelativePath,
-    pub content: TemplateContent,
-    pub permissions: FilePermissions,
+    pub(crate) path: RelativePath,
+    pub(crate) content: TemplateContent,
+    pub(crate) permissions: FilePermissions,
 }
 
 impl FileSpec {
-    pub fn new(path: impl Into<RelativePath>, content: TemplateContent) -> Self {
+    pub(crate) fn new(path: impl Into<RelativePath>, content: TemplateContent) -> Self {
         Self {
             path: path.into(),
             content,
@@ -242,7 +242,7 @@ impl FileSpec {
         }
     }
 
-    pub fn executable(mut self) -> Self {
+    pub(crate) fn executable(mut self) -> Self {
         self.permissions = FilePermissions::EXECUTABLE;
         self
     }
@@ -255,12 +255,12 @@ impl FileSpec {
 /// Specification for a directory in a template.
 #[derive(Debug, Clone)]
 pub struct DirectorySpec {
-    pub path: RelativePath,
-    pub permissions: FilePermissions,
+    pub(crate) path: RelativePath,
+    pub(crate) permissions: FilePermissions,
 }
 
 impl DirectorySpec {
-    pub fn new(path: impl Into<RelativePath>) -> Self {
+    pub(crate) fn new(path: impl Into<RelativePath>) -> Self {
         Self {
             path: path.into(),
             permissions: FilePermissions::DEFAULT,

@@ -1,5 +1,4 @@
 // crates/core/src/errors.rs
-use std::path::PathBuf;
 use thiserror::Error;
 
 /// Top-level error type for the core crate

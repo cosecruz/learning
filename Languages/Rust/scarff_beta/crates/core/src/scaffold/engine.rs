@@ -3,7 +3,11 @@
 use crate::{
     domain::{RenderContext, Target},
     errors::CoreResult,
-    scaffold::{filesystem::RealFilesystem, validator::Validator, writer::FileWriter},
+    scaffold::{
+        filesystem::RealFilesystem,
+        validator::Validator,
+        writer::{FileWriter, Writer},
+    },
     template::{Store, TemplateRenderer, TemplateResolver},
 };
 use std::path::Path;
@@ -147,6 +151,7 @@ impl Engine {
         info!(template_id = %template.id, "Template resolved");
 
         // 3. Create render context
+        // TODO: based on language RenderContext can be used to change name format with var()
         let context = RenderContext::new(project_name);
 
         // 4. Render template to project structure
@@ -162,7 +167,7 @@ impl Engine {
 
         // 5. Write to filesystem
         info!("Writing to filesystem");
-        // self.writer.write(&structure)?;
+        self.writer.write(&structure)?;
 
         info!("Scaffold process completed successfully");
         Ok(())
@@ -232,10 +237,7 @@ pub struct TemplateInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        domain::{Architecture, Language, ProjectType},
-        scaffold::filesystem::MockFilesystem,
-    };
+    use crate::domain::{Architecture, Language, ProjectType};
 
     #[test]
     fn engine_new_loads_builtin_templates() {

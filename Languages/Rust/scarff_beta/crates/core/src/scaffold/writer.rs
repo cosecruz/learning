@@ -1,5 +1,6 @@
-use std::{io, path::Path};
+use std::path::Path;
 
+use anyhow::Context;
 use tracing::{debug, info, instrument, warn};
 
 use crate::{
@@ -112,12 +113,12 @@ impl Writer for FileWriter {
                     directories = structure.directory_count(),
                     "Successfully wrote all files and directories"
                 );
-                Ok::<(), ScaffoldError>(());
+                let _ = Ok::<(), ScaffoldError>(());
             }
             Err(e) => {
                 warn!("Write operation failed, attempting rollback");
                 self.rollback(&structure.root);
-                Err(e)?
+                Err(e).context("failed to write project structure to file system, rolled back")?
             }
         }
 
@@ -263,22 +264,13 @@ impl FileWriter {
 /// - Dry-run mode
 /// - Progress callbacks
 /// - Custom rollback behavior
-#[derive(Debug, Clone)]
+#[derive(Default, Debug, Clone)]
 pub struct WriteConfig {
     /// Whether to overwrite existing files (default: false)
     pub overwrite: bool,
 
     /// Whether to perform a dry-run (don't actually write) (default: false)
     pub dry_run: bool,
-}
-
-impl Default for WriteConfig {
-    fn default() -> Self {
-        Self {
-            overwrite: false,
-            dry_run: false,
-        }
-    }
 }
 
 // ============================================================================
@@ -288,10 +280,7 @@ impl Default for WriteConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        domain::{DirectoryToCreate, FilePermissions, FileToWrite},
-        scaffold::filesystem::MockFilesystem,
-    };
+    use crate::{domain::FilePermissions, scaffold::filesystem::MockFilesystem};
 
     fn create_simple_structure() -> ProjectStructure {
         ProjectStructure::new("/test-project")

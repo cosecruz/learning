@@ -224,7 +224,7 @@ impl MockFilesystem {
         let inner = self
             .inner
             .read()
-            .map_err(|_| io::Error::new(io::ErrorKind::Other, "Lock poisoned"))?;
+            .map_err(|_| io::Error::other("Lock poisoned"))?;
 
         inner
             .files
@@ -247,7 +247,7 @@ impl MockFilesystem {
         let inner = self
             .inner
             .read()
-            .map_err(|_| io::Error::new(io::ErrorKind::Other, "Lock poisoned"))?;
+            .map_err(|_| io::Error::other("Lock poisoned"))?;
 
         inner
             .files
@@ -313,7 +313,7 @@ impl Filesystem for MockFilesystem {
         let mut inner = self
             .inner
             .write()
-            .map_err(|_| io::Error::new(io::ErrorKind::Other, "Lock poisoned"))?;
+            .map_err(|_| io::Error::other("Lock poisoned"))?;
 
         // Add all parent directories
         let mut current = PathBuf::new();
@@ -329,16 +329,17 @@ impl Filesystem for MockFilesystem {
         let mut inner = self
             .inner
             .write()
-            .map_err(|_| io::Error::new(io::ErrorKind::Other, "Lock poisoned"))?;
+            .map_err(|_| io::Error::other("Lock poisoned"))?;
 
         // Ensure parent directory exists
-        if let Some(parent) = path.parent() {
-            if !parent.as_os_str().is_empty() && !inner.directories.contains(parent) {
-                return Err(io::Error::new(
-                    io::ErrorKind::NotFound,
-                    format!("Parent directory does not exist: {}", parent.display()),
-                ));
-            }
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+            && !inner.directories.contains(parent)
+        {
+            return Err(io::Error::new(
+                io::ErrorKind::NotFound,
+                format!("Parent directory does not exist: {}", parent.display()),
+            ));
         }
 
         inner.files.insert(
@@ -356,7 +357,7 @@ impl Filesystem for MockFilesystem {
         let mut inner = self
             .inner
             .write()
-            .map_err(|_| io::Error::new(io::ErrorKind::Other, "Lock poisoned"))?;
+            .map_err(|_| io::Error::other("Lock poisoned"))?;
 
         inner
             .files
@@ -389,7 +390,7 @@ impl Filesystem for MockFilesystem {
         let mut inner = self
             .inner
             .write()
-            .map_err(|_| io::Error::new(io::ErrorKind::Other, "Lock poisoned"))?;
+            .map_err(|_| io::Error::other("Lock poisoned"))?;
 
         inner.files.remove(path).ok_or_else(|| {
             io::Error::new(
@@ -405,7 +406,7 @@ impl Filesystem for MockFilesystem {
         let mut inner = self
             .inner
             .write()
-            .map_err(|_| io::Error::new(io::ErrorKind::Other, "Lock poisoned"))?;
+            .map_err(|_| io::Error::other("Lock poisoned"))?;
 
         // Remove the directory
         inner.directories.remove(path);

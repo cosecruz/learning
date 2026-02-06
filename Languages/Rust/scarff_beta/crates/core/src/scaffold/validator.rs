@@ -9,7 +9,7 @@
 use anyhow::Context;
 use tracing::{debug, instrument};
 
-use crate::{CoreError, CoreResult, Target, scaffold::errors::ScaffoldError};
+use crate::{CoreResult, Target, scaffold::errors::ScaffoldError};
 
 /// Validates inputs before scaffolding.
 ///
@@ -109,7 +109,7 @@ impl Validator {
         let arch = target.architecture();
 
         // Check architecture-project type compatibility
-        if !arch.supports(&target.project_type()) {
+        if !arch.supports(target.project_type()) {
             let suggestions = self.suggest_architectures(target);
 
             return Err(ScaffoldError::InvalidTarget {

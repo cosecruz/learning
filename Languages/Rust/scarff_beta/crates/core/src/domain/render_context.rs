@@ -95,8 +95,7 @@ impl RenderContext {
 /// - Replace hyphens and spaces with underscores
 /// - Convert to lowercase
 fn to_snake_case(s: &str) -> String {
-    s.replace('-', "_")
-        .replace(' ', "_")
+    s.replace(['-', ' '], "_")
         .chars()
         .map(|c| c.to_lowercase().to_string())
         .collect()
@@ -108,8 +107,7 @@ fn to_snake_case(s: &str) -> String {
 /// - Replace underscores and spaces with hyphens
 /// - Convert to lowercase
 fn to_kebab_case(s: &str) -> String {
-    s.replace('_', "-")
-        .replace(' ', "-")
+    s.replace(['_', ' '], "-")
         .chars()
         .map(|c| c.to_lowercase().to_string())
         .collect()

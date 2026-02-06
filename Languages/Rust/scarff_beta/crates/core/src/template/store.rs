@@ -1,15 +1,10 @@
 use std::{
-    cell::RefCell,
     collections::HashMap,
-    rc::Rc,
     sync::{Arc, RwLock},
 };
 
 use crate::{
-    domain::{
-        Architecture, DirectorySpec, FileSpec, Language, ProjectType, Target, TargetMatcher,
-        Template, TemplateContent, TemplateId, TemplateMetadata, TemplateNode, TemplateTree,
-    },
+    domain::{Target, Template, TemplateId},
     errors::CoreResult,
     template::{built_in_templates, errors::TemplateError},
 };
@@ -159,23 +154,23 @@ struct TemplateStore {
 fn validate_template(template: &Template) -> CoreResult<()> {
     // Check that ID is not empty
     if template.id.0.is_empty() {
-        return Err(TemplateError::InvalidTemplate(
+        Err(TemplateError::InvalidTemplate(
             "Template ID cannot be empty".to_string(),
-        ))?;
+        ))?
     }
 
     // Validate metadata
     if template.metadata.name.is_empty() {
-        return Err(TemplateError::InvalidTemplate(
+        Err(TemplateError::InvalidTemplate(
             "Template name cannot be empty".to_string(),
-        ))?;
+        ))?
     }
 
     // Validate tree has at least one node
     if template.tree.nodes.is_empty() {
-        return Err(TemplateError::InvalidTemplate(
+        Err(TemplateError::InvalidTemplate(
             "Template tree must have at least one node".to_string(),
-        ))?;
+        ))?
     }
 
     Ok(())
@@ -184,7 +179,8 @@ fn validate_template(template: &Template) -> CoreResult<()> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        domain::{Framework, RustFramework},
+        Architecture, Language, ProjectType,
+        domain::{Framework, RustFramework, TargetMatcher, TemplateMetadata, TemplateTree},
         template::built_in_templates,
     };
 

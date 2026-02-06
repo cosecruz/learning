@@ -37,7 +37,7 @@ mod template;
 pub use domain::{
     Architecture,
     // Error types
-    DomainError,
+    // DomainError,
     Framework,
 
     Language,
@@ -50,6 +50,8 @@ pub use domain::{
 
 // Re-export error types
 pub use errors::{CoreError, CoreResult};
+
+pub use scaffold::engine::Engine;
 
 // Internal types (DO NOT expose these)
 // - FilePermissions (implementation detail)

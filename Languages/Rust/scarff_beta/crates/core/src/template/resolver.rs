@@ -1,5 +1,5 @@
 //! - TemplateResolver: resolves Target to a Template. This is where the matching happens
-//! Goal is to find the right template for target
+//!   Goal is to find the right template for target
 
 use anyhow::Context;
 
@@ -53,7 +53,7 @@ impl TemplateResolver {
     }
 
     ///return templates that is available that targets resolve to
-    pub fn find_all(&self, target: &Target) -> CoreResult<Vec<Template>> {
+    pub fn find_all(&self, _target: &Target) -> CoreResult<Vec<Template>> {
         todo!("post mvp")
     }
 }

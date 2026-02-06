@@ -15,14 +15,14 @@ use super::common::FilePermissions;
 /// This is the output of template resolution + rendering.
 /// Contains everything needed to write a project to disk.
 #[derive(Debug, Clone)]
-pub struct ProjectStructure {
-    pub root: PathBuf,
-    pub entries: Vec<FsEntry>,
+pub(crate) struct ProjectStructure {
+    pub(crate) root: PathBuf,
+    pub(crate) entries: Vec<FsEntry>,
 }
 
 impl ProjectStructure {
     /// Create a new project structure with a root path.
-    pub fn new(root: impl Into<PathBuf>) -> Self {
+    pub(crate) fn new(root: impl Into<PathBuf>) -> Self {
         Self {
             root: root.into(),
             entries: Vec::new(),
@@ -30,7 +30,7 @@ impl ProjectStructure {
     }
 
     /// Add a file to the structure (mutable).
-    pub fn add_file(
+    pub(crate) fn add_file(
         &mut self,
         path: impl Into<PathBuf>,
         content: String,
@@ -44,7 +44,7 @@ impl ProjectStructure {
     }
 
     /// Add a directory to the structure (mutable).
-    pub fn add_directory(&mut self, path: impl Into<PathBuf>, permissions: FilePermissions) {
+    pub(crate) fn add_directory(&mut self, path: impl Into<PathBuf>, permissions: FilePermissions) {
         self.entries.push(FsEntry::Directory(DirectoryToCreate {
             path: path.into(),
             permissions,
@@ -52,7 +52,7 @@ impl ProjectStructure {
     }
 
     /// Add a file to the structure (builder style).
-    pub fn with_file(
+    pub(crate) fn with_file(
         mut self,
         path: impl Into<PathBuf>,
         content: String,
@@ -63,7 +63,7 @@ impl ProjectStructure {
     }
 
     /// Add a directory to the structure (builder style).
-    pub fn with_directory(
+    pub(crate) fn with_directory(
         mut self,
         path: impl Into<PathBuf>,
         permissions: FilePermissions,
@@ -78,7 +78,7 @@ impl ProjectStructure {
     /// - No duplicate paths
     /// - No absolute paths (all paths should be relative to root)
     /// - No empty file content (warn, not error)
-    pub fn validate(&self) -> Result<(), DomainError> {
+    pub(crate) fn validate(&self) -> Result<(), DomainError> {
         let mut seen_paths = std::collections::HashSet::new();
 
         for entry in &self.entries {
@@ -108,7 +108,7 @@ impl ProjectStructure {
     }
 
     /// Get all files in this structure.
-    pub fn files(&self) -> impl Iterator<Item = &FileToWrite> {
+    pub(crate) fn files(&self) -> impl Iterator<Item = &FileToWrite> {
         self.entries.iter().filter_map(|e| match e {
             FsEntry::File(f) => Some(f),
             _ => None,
@@ -116,7 +116,7 @@ impl ProjectStructure {
     }
 
     /// Get all directories in this structure.
-    pub fn directories(&self) -> impl Iterator<Item = &DirectoryToCreate> {
+    pub(crate) fn directories(&self) -> impl Iterator<Item = &DirectoryToCreate> {
         self.entries.iter().filter_map(|e| match e {
             FsEntry::Directory(d) => Some(d),
             _ => None,
@@ -124,17 +124,17 @@ impl ProjectStructure {
     }
 
     /// Count total entries.
-    pub fn entry_count(&self) -> usize {
+    pub(crate) fn entry_count(&self) -> usize {
         self.entries.len()
     }
 
     /// Count files only.
-    pub fn file_count(&self) -> usize {
+    pub(crate) fn file_count(&self) -> usize {
         self.files().count()
     }
 
     /// Count directories only.
-    pub fn directory_count(&self) -> usize {
+    pub(crate) fn directory_count(&self) -> usize {
         self.directories().count()
     }
 }
@@ -145,7 +145,7 @@ impl ProjectStructure {
 
 /// A filesystem entry (file or directory).
 #[derive(Debug, Clone)]
-pub enum FsEntry {
+pub(crate) enum FsEntry {
     File(FileToWrite),
     Directory(DirectoryToCreate),
 }
@@ -156,14 +156,18 @@ pub enum FsEntry {
 
 /// A file to be written to disk.
 #[derive(Debug, Clone)]
-pub struct FileToWrite {
+pub(crate) struct FileToWrite {
     pub path: PathBuf,
     pub content: String,
     pub permissions: FilePermissions,
 }
 
 impl FileToWrite {
-    pub fn new(path: impl Into<PathBuf>, content: String, permissions: FilePermissions) -> Self {
+    pub(crate) fn new(
+        path: impl Into<PathBuf>,
+        content: String,
+        permissions: FilePermissions,
+    ) -> Self {
         Self {
             path: path.into(),
             content,
@@ -172,12 +176,12 @@ impl FileToWrite {
     }
 
     /// Check if this file is empty.
-    pub fn is_empty(&self) -> bool {
+    pub(crate) fn is_empty(&self) -> bool {
         self.content.is_empty()
     }
 
     /// Get file size in bytes.
-    pub fn size(&self) -> usize {
+    pub(crate) fn size(&self) -> usize {
         self.content.len()
     }
 }
@@ -188,13 +192,13 @@ impl FileToWrite {
 
 /// A directory to be created on disk.
 #[derive(Debug, Clone)]
-pub struct DirectoryToCreate {
+pub(crate) struct DirectoryToCreate {
     pub path: PathBuf,
     pub permissions: FilePermissions,
 }
 
 impl DirectoryToCreate {
-    pub fn new(path: impl Into<PathBuf>, permissions: FilePermissions) -> Self {
+    pub(crate) fn new(path: impl Into<PathBuf>, permissions: FilePermissions) -> Self {
         Self {
             path: path.into(),
             permissions,

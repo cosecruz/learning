@@ -33,7 +33,7 @@
 // }
 
 use crate::domain::{
-    Architecture, DirectorySpec, FileSpec, Language, ProjectType, Target, TargetMatcher, Template,
+    Architecture, DirectorySpec, FileSpec, Language, ProjectType, TargetMatcher, Template,
     TemplateContent, TemplateId, TemplateMetadata, TemplateNode, TemplateTree,
 };
 

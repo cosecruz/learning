@@ -4,24 +4,28 @@
 
 use std::path::PathBuf;
 
+use tracing::{debug, info, instrument};
+
 use crate::{
     domain::{ProjectStructure, RenderContext, Template, TemplateContent, TemplateNode},
     errors::CoreResult,
 };
 
-pub struct TemplateRenderer;
+pub(crate) struct TemplateRenderer;
 
 impl TemplateRenderer {
     pub(crate) fn new() -> Self {
         Self
     }
 
-    pub fn render(
+    #[instrument(skip(self, template, ctx), fields(template_id = %template.id))]
+    pub(crate) fn render(
         &self,
         template: &Template,
         ctx: &RenderContext,
         output_root: PathBuf,
     ) -> CoreResult<ProjectStructure> {
+        info!("[scaffold] rendering template");
         let mut structure = ProjectStructure::new(output_root);
 
         for node in &template.tree.nodes {
@@ -32,6 +36,7 @@ impl TemplateRenderer {
                         TemplateContent::Template(t) => ctx.render(t),
                         TemplateContent::Rendered { template_id } => {
                             // complex rendering PST MVP
+                            debug!(template_id = ?template_id);
                             todo!("Complex template rendering")
                         }
                     };
