@@ -3,18 +3,25 @@ members = ["crates/*"]
 resolver = "2"
 
 [workspace.package]
+name = "scarff"
 version = "0.1.0"
 edition = "2024"
 authors = ["Obiechi Ebuka Samuel oesisu@outlook.com"]
-repository = ""
-license = ""
+rust-version = "1.75"
+description = "Project scaffolding made instant - CLI tool"
+documentation = "https://docs.rs/scarff"
+repository = "https://github.com/cosecruz/scarff"
+license = "MIT OR Apache-2.0"
+keywords = ["scaffolding", "cli", "project", "generator", "template"]
+categories = ["command-line-utilities", "development-tools"]
+
 
 [workspace.dependencies]
 anyhow = "1.0.101"
 thiserror = "2.0.18"
-uuid = { version = "1.20.0", features = ["v4", "v7"] }
+# uuid = { version = "1.20.0", features = ["v4", "v7"] }
 tracing = "0.1.44"
-tracing-subscriber = "0.3.22"
+tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
 
 
 [profile.release]
@@ -22,3 +29,12 @@ opt-level = 3
 lto = "fat"       #full link time optimization for performance
 codegen-units = 1 # better optimization at the cost of compile time;
 panic = "abort"
+strip = true
+
+[profile.dev]
+opt-level = 0
+debug = true
+
+# Profile for faster development iterations
+[profile.dev.package."*"]
+opt-level = 2

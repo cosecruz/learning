@@ -39,13 +39,15 @@ pub use domain::{
     // Error types
     // DomainError,
     Framework,
-
     Language,
     ProjectType,
+    PythonFramework,
+    RustFramework,
     // Core types for building targets
     Target,
     // Builder pattern
     // TargetBuilder,
+    TypeScriptFramework,
 };
 
 // Re-export error types

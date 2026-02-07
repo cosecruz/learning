@@ -1,5 +1,5 @@
 [package]
-name = "cli"
+name = "scarff-cli"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -12,26 +12,28 @@ name = "scarff"
 path = "src/main.rs"
 
 [dependencies]
+# Error handling
 thiserror.workspace = true
 anyhow.workspace = true
+
+# Logging
 tracing.workspace = true
 tracing-subscriber.workspace = true
 
-# scarff-core
+
+# CLI argument parsing
+clap = { version = "4.5.57", features = [
+  "derive",
+  "cargo",
+  "env",
+  "unicode",
+  "wrap_help",
+] }
+
+# Core library
 scarff-core = { path = "../core" }
 
-
-[profile.release]
-opt-level = 3
-lto = true
-codegen-units = 1
-strip = true
-panic = "abort"
-
-[profile.dev]
-opt-level = 0
-debug = true
-
-# Profile for faster development iterations
-[profile.dev.package."*"]
-opt-level = 2
+# Output formatting
+owo-colors = { version = "4.2.3", features = ["supports-colors"] }
+console = "0.16.2"
+indicatif = "0.18.3"

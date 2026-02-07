@@ -76,7 +76,7 @@ impl Validator {
                     framework,
                     target.language()
                 ),
-                source: None,
+                source_error: None,
             })
             .context("failed to validate framework compatibility with language")?;
         }
@@ -95,7 +95,7 @@ impl Validator {
                     fw,
                     target.project_type()
                 ),
-                source: None,
+                source_error: None,
             }
             .with_suggestions(suggestions))
             .context("failed to validate project type compatibility with framework")?;
@@ -118,7 +118,7 @@ impl Validator {
                     arch,
                     target.project_type()
                 ),
-                source: None,
+                source_error: None,
             }
             .with_suggestions(suggestions))?;
         }
@@ -132,7 +132,7 @@ impl Validator {
                     "Architecture '{}' is not compatible with framework '{}'",
                     arch, framework
                 ),
-                source: None,
+                source_error: None,
             })
             .context("failed to validate architecture compatibility with framework")?;
         }

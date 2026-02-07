@@ -135,7 +135,7 @@ impl FileWriter {
             .map_err(|e| ScaffoldError::FilesystemWrite {
                 path: structure.root.clone(),
                 reason: "Failed to create project root directory".to_string(),
-                source: e,
+                io_error: e.to_string(),
             })?;
 
         debug!("Created project root directory");
@@ -175,7 +175,7 @@ impl FileWriter {
             .map_err(|e| ScaffoldError::FilesystemWrite {
                 path: path.to_path_buf(),
                 reason: "Failed to create directory".to_string(),
-                source: e,
+                io_error: e.to_string(),
             })?;
 
         // Note: We don't set directory permissions in MVP
@@ -205,7 +205,7 @@ impl FileWriter {
                 .map_err(|e| ScaffoldError::FilesystemWrite {
                     path: parent.to_path_buf(),
                     reason: "Failed to create parent directory".to_string(),
-                    source: e,
+                    io_error: e.to_string(),
                 })?;
         }
 
@@ -215,7 +215,7 @@ impl FileWriter {
             .map_err(|e| ScaffoldError::FilesystemWrite {
                 path: path.to_path_buf(),
                 reason: "Failed to write file content".to_string(),
-                source: e,
+                io_error: e.to_string(),
             })?;
 
         // Set permissions if needed
@@ -225,7 +225,7 @@ impl FileWriter {
                 .map_err(|e| ScaffoldError::FilesystemWrite {
                     path: path.to_path_buf(),
                     reason: "Failed to set file permissions".to_string(),
-                    source: e,
+                    io_error: e.to_string(),
                 })?;
         }
 

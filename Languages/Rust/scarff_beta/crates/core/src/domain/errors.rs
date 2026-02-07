@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use thiserror::Error;
 
 /// Domain-specific errors for Scarff's core types.
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Clone)]
 pub enum DomainError {
     // ========================================================================
     // Language errors

@@ -2,7 +2,7 @@ use thiserror::Error;
 
 use crate::domain::{Target, TemplateId};
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Clone)]
 pub enum TemplateError {
     ///
     /// Shared errors

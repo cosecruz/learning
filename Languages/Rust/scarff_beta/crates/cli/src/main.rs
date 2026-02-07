@@ -1,180 +1,100 @@
-use std::{collections::HashMap, fmt};
+//! # Scarff CLI
+//!
+//! Command-line interface for the Scarff project scaffolding tool.
+//!
+//! ## Quick Start
+//!
+//! ```bash
+//! # Create a new Rust CLI project
+//! scarff new my-cli --lang rust --type cli --arch layered
+//!
+//! # Create a Python backend with FastAPI
+//! scarff new my-api --lang=python --type=backend --framework=fastapi
+//!
+//! # Short form
+//! scarff new my-app -l rust -t backend -a layered -f axum
+//! ```
 
-use anyhow::{Context, Result};
-use scarff_core::Target;
-use thiserror::Error;
+use anyhow::Result;
+use clap::Parser;
+use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
-/* ===========================
-CLI ERRORS
-=========================== */
+mod args;
+mod commands;
+mod error;
+mod output;
 
-#[derive(Debug, Error)]
-pub enum CliError {
-    #[error("invalid arguments")]
-    InvalidArgument,
+use args::Cli;
 
-    #[error("invalid command `{0}`")]
-    InvalidCommand(String),
+fn main() -> Result<()> {
+    // Parse CLI arguments first (this will handle --help, --version, etc.)
+    let cli = Cli::parse();
 
-    #[error("failure parsing arguments")]
-    ParseError,
+    // Initialize logging based on verbosity flags
+    init_logging(&cli)?;
+
+    // Execute the command
+    cli.execute()
 }
 
-pub type CliResult<T> = Result<T>;
+/// Initialize tracing/logging based on CLI flags.
+///
+/// Logging behavior:
+/// - Default: Only errors are shown
+/// - `-v` (verbose): Info-level messages (progress, major steps)
+/// - `-q` (quiet): No output except critical errors
+/// - `RUST_LOG` env var: Overrides CLI flags
+fn init_logging(cli: &Cli) -> Result<()> {
+    // Determine log level from flags
+    let default_filter = if cli.quiet {
+        "error"
+    } else if cli.verbose {
+        "scarff=info,scarff_core=info"
+    } else {
+        "warn"
+    };
 
-/* ===========================
-COMMANDS
-=========================== */
+    // Build the filter
+    let filter = EnvFilter::try_from_default_env()
+        .or_else(|_| EnvFilter::try_new(default_filter))
+        .unwrap();
 
-#[derive(Debug, Clone)]
-pub enum Command {
-    New(NewArgs),
-}
+    // Set up subscriber
+    tracing_subscriber::registry()
+        .with(filter)
+        .with(
+            fmt::layer()
+                .with_target(false) // Don't show module paths
+                .with_writer(std::io::stderr) // Log to stderr
+                .without_time() // Don't show timestamps (cleaner for CLI)
+                .with_ansi(!cli.no_color), // Respect --no-color flag
+        )
+        .init();
 
-impl Command {
-    pub fn as_str(&self) -> &str {
-        match self {
-            Command::New(_) => "new",
-        }
-    }
-
-    pub fn run(&self) -> CliResult<()> {
-        match self {
-            Command::New(args) => {
-                println!("Running `new` command with:");
-                println!("{args:#?}");
-
-                // let target = Target::builder()
-                //     .language(scarff_core::Language::Rust)
-                //     .project_type(scarff_core::ProjectType::Cli)
-                //     .resolve()?;
-
-                // let scarff_engine = scarff_core::Engine::new();
-                // scarff_engine.scaffold(target, "test_scarff", "./")
-                Ok(())
-            }
-        }
-    }
-}
-
-impl fmt::Display for Command {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.as_str())
-    }
-}
-
-/* ===========================
-NEW COMMAND ARGS
-=========================== */
-
-#[derive(Debug, Clone)]
-pub struct NewArgs {
-    pub language: String,
-    pub project_type: Option<String>,
-    pub framework: Option<String>,
-    pub architecture: Option<String>,
-}
-
-impl NewArgs {
-    pub fn from(args: HashMap<String, String>) -> CliResult<Self> {
-        let language = args
-            .get("language")
-            .cloned()
-            .ok_or(CliError::ParseError)
-            .context("`--language` is required")?;
-
-        Ok(Self {
-            language,
-            project_type: args.get("project_type").cloned(),
-            framework: args.get("framework").cloned(),
-            architecture: args.get("architecture").cloned(),
-        })
-    }
-}
-
-/* ===========================
-ARG PARSER
-=========================== */
-
-fn parse_args(args: &[String]) -> CliResult<Command> {
-    if args.is_empty() {
-        return Err(CliError::InvalidArgument).context("no command provided");
-    }
-
-    let command = args[0].as_str();
-    let flags = &args[1..];
-
-    match command {
-        "new" => {
-            let kv = parse_flags(flags)?;
-            let args = NewArgs::from(kv)?;
-            Ok(Command::New(args))
-        }
-        other => Err(CliError::InvalidCommand(other.to_string()))?,
-    }
-}
-
-fn parse_flags(args: &[String]) -> CliResult<HashMap<String, String>> {
-    let mut map = HashMap::new();
-    let mut iter = args.iter().peekable();
-
-    while let Some(arg) = iter.next() {
-        if !arg.starts_with("--") {
-            return Err(CliError::InvalidArgument).context(format!("unexpected argument `{arg}`"));
-        }
-
-        // --key=value form
-        if let Some((k, v)) = arg.split_once('=') {
-            let key = normalize_key(k)?;
-            insert_unique(&mut map, key, v.to_string())?;
-            continue;
-        }
-
-        // --key value form
-        let key = normalize_key(arg)?;
-        let value = iter
-            .next()
-            .ok_or(CliError::InvalidArgument)
-            .context(format!("missing value for `{key}`"))?;
-
-        if value.starts_with("--") {
-            return Err(CliError::InvalidArgument)
-                .context(format!("invalid value `{value}` for `{key}`"));
-        }
-
-        insert_unique(&mut map, key, value.to_string())?;
-    }
-
-    Ok(map)
-}
-
-fn normalize_key(raw: &str) -> CliResult<String> {
-    if !raw.starts_with("--") {
-        Err(CliError::InvalidArgument)?;
-    }
-
-    Ok(raw.trim_start_matches("--").replace('-', "_"))
-}
-
-fn insert_unique(map: &mut HashMap<String, String>, key: String, value: String) -> CliResult<()> {
-    if map.contains_key(&key) {
-        return Err(CliError::InvalidArgument).context(format!("duplicate argument `{key}`"));
-    }
-    map.insert(key, value);
     Ok(())
 }
 
-/* ===========================
-MAIN
-=========================== */
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-fn main() -> CliResult<()> {
-    let args: Vec<String> = std::env::args().skip(1).collect();
-
-    if args.len() < 2 {
-        return Err(CliError::InvalidArgument).context("usage: scarff <command> [options]");
+    #[test]
+    fn verify_cli() {
+        use clap::CommandFactory;
+        Cli::command().debug_assert();
     }
 
-    let command = parse_args(&args)?;
-    command.run()
+    #[test]
+    fn help_message_includes_examples() {
+        use clap::CommandFactory;
+        let help = Cli::command().render_help().to_string();
+        assert!(help.contains("EXAMPLES:"));
+    }
+
+    #[test]
+    fn version_is_set() {
+        use clap::CommandFactory;
+        let cmd = Cli::command();
+        assert!(cmd.get_version().is_some());
+    }
 }
