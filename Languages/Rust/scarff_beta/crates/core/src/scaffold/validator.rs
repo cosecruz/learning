@@ -68,7 +68,7 @@ impl Validator {
     ///Validate framework is compatible with language
     fn validate_framework(&self, target: &Target) -> CoreResult<()> {
         if let Some(framework) = target.framework()
-            && framework.language() != *target.language()
+            && framework.language() != target.language()
         {
             return Err(ScaffoldError::InvalidTarget {
                 reason: format!(
@@ -146,7 +146,7 @@ impl Validator {
 
         let mut suggestions = Vec::new();
 
-        match (*target.language(), *target.project_type()) {
+        match (target.language(), target.project_type()) {
             // TODO: remove hardcoded stuff; there should be a function that returns
             // TODO: Framework for a language and language_project_type just have to loop through it and push to suggestions
             // this will avoid mistakes of pushing not compatible suggestions and easier if options becomes numerous

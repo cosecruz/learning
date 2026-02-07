@@ -21,6 +21,15 @@ pub enum DomainError {
     )]
     UnsupportedProjectType { project_type: String },
 
+    /// Project type  is incompatible with the specified language
+    #[error(
+        "Language '{language}' is not best used for type '{project_type}'. This project type is better implemented with a different language ecosystem"
+    )]
+    ProjectTypeLanguageMismatch {
+        project_type: String,
+        language: String,
+    },
+
     // ========================================================================
     // Framework errors
     // ========================================================================

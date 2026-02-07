@@ -12,6 +12,7 @@ mod errors;
 mod project_structure;
 mod render_context;
 mod target;
+mod target_v2;
 mod template;
 
 // Re-export common types for convenience
