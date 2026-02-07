@@ -191,7 +191,7 @@ mod tests {
             .language(Language::Rust)
             .project_type(ProjectType::Cli)
             .architecture(Architecture::Layered)
-            .resolve()
+            .build()
             .unwrap()
     }
 
@@ -223,7 +223,7 @@ mod tests {
             .language(Language::Rust)
             .project_type(ProjectType::Cli)
             .architecture(Architecture::Layered)
-            .resolve()
+            .build()
             .unwrap();
 
         let results = store.find(&target).unwrap();

@@ -169,7 +169,7 @@ impl TargetBuilder<HasLanguage> {
     /// - Architecture is incompatible with framework or project type
     /// - Required framework is missing for certain project types
     /// - Inference cannot determine a valid configuration
-    pub fn resolve(self) -> Result<Target, DomainError> {
+    pub fn build(self) -> Result<Target, DomainError> {
         let language = self
             .language
             .expect("HasLanguage state guarantees language is set");
@@ -1127,20 +1127,14 @@ mod tests {
         // let target = Target::builder().resolve();
 
         // This is the only valid way:
-        let target = Target::builder()
-            .language(Language::Rust)
-            .resolve()
-            .unwrap();
+        let target = Target::builder().language(Language::Rust).build().unwrap();
 
         assert_eq!(target.language, Language::Rust);
     }
 
     #[test]
     fn builder_language_only_defaults_everything() {
-        let target = Target::builder()
-            .language(Language::Rust)
-            .resolve()
-            .unwrap();
+        let target = Target::builder().language(Language::Rust).build().unwrap();
 
         assert_eq!(target.language, Language::Rust);
         assert_eq!(target.project_type, ProjectType::Backend);
@@ -1152,7 +1146,7 @@ mod tests {
     fn builder_python_defaults() {
         let target = Target::builder()
             .language(Language::Python)
-            .resolve()
+            .build()
             .unwrap();
 
         assert_eq!(target.project_type, ProjectType::Backend);
@@ -1167,7 +1161,7 @@ mod tests {
     fn builder_typescript_defaults_to_frontend() {
         let target = Target::builder()
             .language(Language::TypeScript)
-            .resolve()
+            .build()
             .unwrap();
 
         assert_eq!(target.project_type, ProjectType::Frontend);
@@ -1182,7 +1176,7 @@ mod tests {
         let target = Target::builder()
             .language(Language::TypeScript)
             .project_type(ProjectType::Backend)
-            .resolve()
+            .build()
             .unwrap();
 
         assert_eq!(target.project_type, ProjectType::Backend);
@@ -1198,7 +1192,7 @@ mod tests {
         let target = Target::builder()
             .language(Language::TypeScript)
             .framework(Framework::TypeScript(TypeScriptFramework::NextJs))
-            .resolve()
+            .build()
             .unwrap();
 
         assert_eq!(target.project_type, ProjectType::Fullstack);
@@ -1215,7 +1209,7 @@ mod tests {
             .language(Language::Python)
             .framework(Framework::Python(PythonFramework::Django))
             .architecture(Architecture::Mvc)
-            .resolve()
+            .build()
             .unwrap();
 
         assert_eq!(target.architecture, Architecture::Mvc);
@@ -1226,7 +1220,7 @@ mod tests {
         let target = Target::builder()
             .language(Language::Rust)
             .project_type(ProjectType::Cli)
-            .resolve()
+            .build()
             .unwrap();
 
         assert_eq!(target.project_type, ProjectType::Cli);
@@ -1243,7 +1237,7 @@ mod tests {
         let result = Target::builder()
             .language(Language::Rust)
             .framework(Framework::Python(PythonFramework::Django))
-            .resolve();
+            .build();
 
         assert!(result.is_err());
         assert!(matches!(
@@ -1258,7 +1252,7 @@ mod tests {
             .language(Language::TypeScript)
             .framework(Framework::TypeScript(TypeScriptFramework::React))
             .project_type(ProjectType::Backend)
-            .resolve();
+            .build();
 
         assert!(result.is_err());
         assert!(matches!(
@@ -1273,7 +1267,7 @@ mod tests {
             .language(Language::Rust)
             .project_type(ProjectType::Cli)
             .architecture(Architecture::AppRouter) // AppRouter only for Fullstack
-            .resolve();
+            .build();
 
         assert!(result.is_err());
         assert!(matches!(
@@ -1289,7 +1283,7 @@ mod tests {
             .language(Language::TypeScript)
             .framework(Framework::TypeScript(TypeScriptFramework::React))
             .architecture(Architecture::Layered) // Frontend frameworks don't support backend architectures
-            .resolve();
+            .build();
 
         println!("{result:?}");
         // TODO: uncomment this after fix
@@ -1306,7 +1300,7 @@ mod tests {
         let result = Target::builder()
             .language(Language::Rust)
             .project_type(ProjectType::Backend)
-            .resolve();
+            .build();
         assert!(result.is_ok());
 
         // But if inference somehow failed, it would error
@@ -1324,7 +1318,7 @@ mod tests {
             .framework(Framework::Rust(RustFramework::Axum))
             .project_type(ProjectType::Backend)
             .architecture(Architecture::Layered)
-            .resolve()
+            .build()
             .unwrap();
 
         assert_eq!(target.language, Language::Rust);
@@ -1339,7 +1333,7 @@ mod tests {
             .language(Language::Python)
             .framework(Framework::Python(PythonFramework::Django))
             .architecture(Architecture::Mvc)
-            .resolve()
+            .build()
             .unwrap();
 
         assert_eq!(target.project_type, ProjectType::Backend);
@@ -1351,7 +1345,7 @@ mod tests {
         let target = Target::builder()
             .language(Language::TypeScript)
             .framework(Framework::TypeScript(TypeScriptFramework::NextJs))
-            .resolve()
+            .build()
             .unwrap();
 
         assert_eq!(target.project_type, ProjectType::Fullstack);
@@ -1363,7 +1357,7 @@ mod tests {
         let target = Target::builder()
             .language(Language::TypeScript)
             .framework(Framework::TypeScript(TypeScriptFramework::React))
-            .resolve()
+            .build()
             .unwrap();
 
         assert_eq!(target.project_type, ProjectType::Frontend);
@@ -1376,7 +1370,7 @@ mod tests {
         let target = Target::builder()
             .language(Language::Rust)
             .project_type(ProjectType::Cli)
-            .resolve()
+            .build()
             .unwrap();
 
         assert_eq!(target.framework, None);
@@ -1390,7 +1384,7 @@ mod tests {
             .framework(Framework::Python(PythonFramework::FastApi))
             .project_type(ProjectType::Backend)
             .architecture(Architecture::Modular)
-            .resolve()
+            .build()
             .unwrap();
 
         assert_eq!(target.language, Language::Python);
@@ -1411,7 +1405,7 @@ mod tests {
         let target = Target::builder()
             .language(Language::Rust)
             .project_type(ProjectType::Worker)
-            .resolve()
+            .build()
             .unwrap();
 
         assert_eq!(target.project_type, ProjectType::Worker);
@@ -1424,7 +1418,7 @@ mod tests {
         let target = Target::builder()
             .language(Language::TypeScript)
             .project_type(ProjectType::Backend)
-            .resolve()
+            .build()
             .unwrap();
 
         assert_eq!(
@@ -1439,7 +1433,7 @@ mod tests {
         let target = Target::builder()
             .language(Language::TypeScript)
             .framework(Framework::TypeScript(TypeScriptFramework::NestJs))
-            .resolve()
+            .build()
             .unwrap();
 
         assert_eq!(target.project_type, ProjectType::Backend);

@@ -9,3 +9,6 @@ pub mod errors;
 pub mod filesystem;
 mod validator;
 mod writer;
+
+pub use engine::{Engine, TemplateInfo};
+pub use errors::ScaffoldError;

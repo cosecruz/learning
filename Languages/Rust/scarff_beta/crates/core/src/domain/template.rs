@@ -345,7 +345,7 @@ mod tests {
             .language(Language::Rust)
             .project_type(ProjectType::Cli)
             .architecture(Architecture::Layered)
-            .resolve()
+            .build()
             .unwrap();
 
         assert!(matcher.matches(&target));
@@ -358,7 +358,7 @@ mod tests {
         let target = Target::builder()
             .language(Language::Python)
             .project_type(ProjectType::Cli)
-            .resolve()
+            .build()
             .unwrap();
 
         assert!(!matcher.matches(&target));
@@ -371,7 +371,7 @@ mod tests {
         let target = Target::builder()
             .language(Language::Rust)
             .project_type(ProjectType::Backend)
-            .resolve()
+            .build()
             .unwrap();
 
         assert!(!matcher.matches(&target));

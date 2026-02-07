@@ -231,7 +231,7 @@ mod tests {
             .language(Language::Rust)
             .project_type(ProjectType::Cli)
             .architecture(Architecture::Layered)
-            .resolve()
+            .build()
             .unwrap();
 
         assert!(validator.validate(&target).is_ok());
@@ -245,7 +245,7 @@ mod tests {
             .language(Language::Rust)
             .project_type(ProjectType::Backend)
             .architecture(Architecture::Layered)
-            .resolve()
+            .build()
             .unwrap();
 
         let suggestions = validator.suggest_frameworks(&target);
@@ -261,7 +261,7 @@ mod tests {
             .language(Language::Rust)
             .project_type(ProjectType::Backend)
             .architecture(Architecture::Layered)
-            .resolve()
+            .build()
             .unwrap();
 
         let suggestions = validator.suggest_architectures(&target);
@@ -280,7 +280,7 @@ mod tests {
             .language(Language::Rust)
             .project_type(ProjectType::Cli)
             .architecture(Architecture::AppRouter)
-            .resolve()
+            .build()
             .unwrap();
 
         // this test should fail because builder fails to build and returns ArchitectureProjectTypeMismatch { architecture: "app-router", project_type: "cli" }

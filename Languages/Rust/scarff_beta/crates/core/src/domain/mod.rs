@@ -16,7 +16,7 @@ mod template;
 
 // Re-export common types for convenience
 pub(crate) use common::{FilePermissions, RelativePath};
-pub(crate) use errors::DomainError;
+pub use errors::DomainError;
 
 // Re exporting project_structure
 pub(crate) use project_structure::{
@@ -26,8 +26,8 @@ pub(crate) use project_structure::{
 };
 pub(crate) use render_context::RenderContext;
 pub use target::{
-    Architecture, Framework, Language, ProjectType, PythonFramework, RustFramework, Target,
-    TypeScriptFramework,
+    Architecture, Framework, HasLanguage, Language, NoLanguage, ProjectType, PythonFramework,
+    RustFramework, Target, TargetBuilder, TypeScriptFramework,
 };
 pub(crate) use template::{
     DirectorySpec, FileSpec, TargetMatcher, Template, TemplateContent, TemplateId,

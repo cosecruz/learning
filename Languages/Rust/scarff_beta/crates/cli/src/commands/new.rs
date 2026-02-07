@@ -198,7 +198,7 @@ fn build_target(cmd: &NewCommand) -> Result<Target, CliError> {
 
     // Build and validate
     builder
-        .resolve()
+        .build()
         .map_err(|e| CliError::Core(scarff_core::CoreError::Domain(e)))
 }
 

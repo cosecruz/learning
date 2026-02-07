@@ -276,7 +276,7 @@ mod tests {
             .language(Language::Rust)
             .project_type(ProjectType::Cli)
             .architecture(Architecture::Layered)
-            .resolve()
+            .build()
             .unwrap();
 
         let matches = engine.find_templates(&target).unwrap();
