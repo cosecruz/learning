@@ -47,7 +47,7 @@ If you want to keep **one enum for now**, here’s a **cleaner, more consistent 
 ```rust
 /// Describes the primary intent of a project.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ProjectType {
+pub enum ProjectKind {
     /// Command-line application
     Cli,
 
@@ -83,7 +83,7 @@ pub enum ProjectType {
 - `MobileFE → MobileApp`
 - `DesktopFE → DesktopApp`
 - `TUI → TerminalUI`
-- `PT → ProjectType` (huge clarity win)
+- `PT → ProjectKind` (huge clarity win)
 
 This alone will make **error messages, docs, and logs 10× clearer**.
 
@@ -183,14 +183,14 @@ Names are polish — structure is the hard part, and you nailed that.
 
 For _Scarff_ **right now**:
 
-- Rename `PT` → `ProjectType`
-- Use **Option<ProjectType>**, drop `None`
+- Rename `PT` → `ProjectKind`
+- Use **Option<ProjectKind>**, drop `None`
 - Pick **Option 1 naming**
 - Revisit splitting after MVP when inference stabilizes
 
 If you want, next I can:
 
-- Refactor your inference logic using `ProjectType`
+- Refactor your inference logic using `ProjectKind`
 - Design a compatibility table that _doesn’t_ explode combinatorially
 - Help you generate CLI help text automatically from these enums
 
@@ -206,7 +206,7 @@ This describes **intent, MVP defaults, and future expansion** without polluting 
 # Framework Default Inference — Design Notes
 
 This document defines **why** certain frameworks are inferred (or not) for a given
-`(Language, ProjectType)` pair.
+`(Language, ProjectKind)` pair.
 
 The goal is to:
 

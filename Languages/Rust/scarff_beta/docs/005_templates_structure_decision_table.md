@@ -191,10 +191,10 @@ This table answers:
 
 | Input Given                        | Inference Rule                                       |
 | ---------------------------------- | ---------------------------------------------------- |
-| Language only                      | Infer default ProjectType + Framework + Architecture |
-| Language + ProjectType             | Infer default Framework + Architecture               |
-| Language + Framework               | Infer ProjectType + Architecture                     |
-| Language + ProjectType + Framework | Infer Architecture                                   |
+| Language only                      | Infer default ProjectKind + Framework + Architecture |
+| Language + ProjectKind             | Infer default Framework + Architecture               |
+| Language + Framework               | Infer ProjectKind + Architecture                     |
+| Language + ProjectKind + Framework | Infer Architecture                                   |
 | Invalid combo                      | ❌ Reject (ask user)                                 |
 
 ---
@@ -217,7 +217,7 @@ templates/
 General rule:
 
 ```
-templates/{language}/{project_type}/{framework}/{architecture}/{template_id}
+templates/{language}/{kind}/{framework}/{architecture}/{template_id}
 ```
 
 Defaults live at higher levels:
@@ -272,7 +272,7 @@ I’ll give you:
 templates/
 └── {language}/
     ├── _defaults/
-    └── {project_type}/
+    └── {kind}/
         ├── _defaults/
         └── {framework}/
             ├── _defaults/
@@ -353,7 +353,7 @@ This structure lets you do:
 ```text
 Exact match → architecture
 Fallback → framework/_defaults
-Fallback → project_type/_defaults
+Fallback → kind/_defaults
 Fallback → language/_defaults
 ```
 

@@ -382,7 +382,7 @@ You should model this explicitly.
 - Language
 - Runtime
 - Framework
-- ProjectType
+- ProjectKind
 
 ### Compatibility rules
 

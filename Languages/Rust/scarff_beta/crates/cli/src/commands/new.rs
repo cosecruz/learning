@@ -8,11 +8,11 @@ use tracing::{debug, info};
 
 use scarff_core::{
     Architecture as CoreArchitecture, Engine, Framework as CoreFramework, Language as CoreLanguage,
-    ProjectType as CoreProjectType, PythonFramework, RustFramework, Target, TypeScriptFramework,
+    ProjectKind as CoreProjectKind, PythonFramework, RustFramework, Target, TypeScriptFramework,
 };
 
 use crate::{
-    args::{Architecture, Language, NewCommand, ProjectType},
+    args::{Architecture, Language, NewCommand, ProjectKind},
     error::{CliError, IntoCli},
     output,
 };
@@ -181,13 +181,13 @@ fn validate_project_name(name: &str) -> Result<()> {
 fn build_target(cmd: &NewCommand) -> Result<Target, CliError> {
     // Convert CLI enums to core enums
     let language = convert_language(cmd.language);
-    let project_type = convert_project_type(cmd.project_type);
+    let kind = convert_kind(cmd.kind);
     let architecture = convert_architecture(cmd.architecture);
 
     // Start building target
     let mut builder = Target::builder()
         .language(language)
-        .project_type(project_type)
+        .kind(kind)
         .architecture(architecture);
 
     // Add framework if provided
@@ -211,14 +211,14 @@ fn convert_language(lang: Language) -> CoreLanguage {
     }
 }
 
-/// Convert CLI ProjectType to core ProjectType.
-fn convert_project_type(pt: ProjectType) -> CoreProjectType {
+/// Convert CLI ProjectKind to core ProjectKind.
+fn convert_kind(pt: ProjectKind) -> CoreProjectKind {
     match pt {
-        ProjectType::Cli => CoreProjectType::Cli,
-        ProjectType::Backend => CoreProjectType::Backend,
-        ProjectType::Frontend => CoreProjectType::Frontend,
-        ProjectType::Fullstack => CoreProjectType::Fullstack,
-        ProjectType::Worker => CoreProjectType::Worker,
+        ProjectKind::Cli => CoreProjectKind::Cli,
+        ProjectKind::Backend => CoreProjectKind::Backend,
+        ProjectKind::Frontend => CoreProjectKind::Frontend,
+        ProjectKind::Fullstack => CoreProjectKind::Fullstack,
+        ProjectKind::Worker => CoreProjectKind::Worker,
     }
 }
 
@@ -382,14 +382,14 @@ mod tests {
     }
 
     #[test]
-    fn convert_project_types() {
+    fn convert_kinds() {
         assert!(matches!(
-            convert_project_type(ProjectType::Cli),
-            CoreProjectType::Cli
+            convert_kind(ProjectKind::Cli),
+            CoreProjectKind::Cli
         ));
         assert!(matches!(
-            convert_project_type(ProjectType::Backend),
-            CoreProjectType::Backend
+            convert_kind(ProjectKind::Backend),
+            CoreProjectKind::Backend
         ));
     }
 

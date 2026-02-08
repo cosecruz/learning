@@ -134,7 +134,7 @@ pub struct NewCommand {
         value_enum,
         help = "Type of project to generate"
     )]
-    pub project_type: ProjectType,
+    pub kind: ProjectKind,
 
     /// Architecture style
     #[arg(
@@ -214,7 +214,7 @@ impl std::fmt::Display for Language {
 /// Supported project types
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 #[value(rename_all = "lowercase")]
-pub enum ProjectType {
+pub enum ProjectKind {
     /// Command-line interface application
     Cli,
     /// Backend web service
@@ -227,14 +227,14 @@ pub enum ProjectType {
     Worker,
 }
 
-impl std::fmt::Display for ProjectType {
+impl std::fmt::Display for ProjectKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ProjectType::Cli => write!(f, "cli"),
-            ProjectType::Backend => write!(f, "backend"),
-            ProjectType::Frontend => write!(f, "frontend"),
-            ProjectType::Fullstack => write!(f, "fullstack"),
-            ProjectType::Worker => write!(f, "worker"),
+            ProjectKind::Cli => write!(f, "cli"),
+            ProjectKind::Backend => write!(f, "backend"),
+            ProjectKind::Frontend => write!(f, "frontend"),
+            ProjectKind::Fullstack => write!(f, "fullstack"),
+            ProjectKind::Worker => write!(f, "worker"),
         }
     }
 }
@@ -299,26 +299,26 @@ mod tests {
     }
 
     #[test]
-    fn test_project_type_value_enum() {
+    fn test_kind_value_enum() {
         assert_eq!(
-            ProjectType::from_str("cli", true).unwrap(),
-            ProjectType::Cli
+            ProjectKind::from_str("cli", true).unwrap(),
+            ProjectKind::Cli
         );
         assert_eq!(
-            ProjectType::from_str("backend", true).unwrap(),
-            ProjectType::Backend
+            ProjectKind::from_str("backend", true).unwrap(),
+            ProjectKind::Backend
         );
         assert_eq!(
-            ProjectType::from_str("frontend", true).unwrap(),
-            ProjectType::Frontend
+            ProjectKind::from_str("frontend", true).unwrap(),
+            ProjectKind::Frontend
         );
         assert_eq!(
-            ProjectType::from_str("fullstack", true).unwrap(),
-            ProjectType::Fullstack
+            ProjectKind::from_str("fullstack", true).unwrap(),
+            ProjectKind::Fullstack
         );
         assert_eq!(
-            ProjectType::from_str("worker", true).unwrap(),
-            ProjectType::Worker
+            ProjectKind::from_str("worker", true).unwrap(),
+            ProjectKind::Worker
         );
     }
 
@@ -361,7 +361,7 @@ mod tests {
 
         if let Commands::New(cmd) = cli.command {
             assert_eq!(cmd.language, Language::Rust);
-            assert_eq!(cmd.project_type, ProjectType::Cli);
+            assert_eq!(cmd.kind, ProjectKind::Cli);
             assert_eq!(cmd.architecture, Architecture::Layered);
         } else {
             panic!("Expected New command");
@@ -375,7 +375,7 @@ mod tests {
 
         if let Commands::New(cmd) = cli.command {
             assert_eq!(cmd.language, Language::Rust);
-            assert_eq!(cmd.project_type, ProjectType::Cli);
+            assert_eq!(cmd.kind, ProjectKind::Cli);
             assert_eq!(cmd.architecture, Architecture::Layered);
         } else {
             panic!("Expected New command");

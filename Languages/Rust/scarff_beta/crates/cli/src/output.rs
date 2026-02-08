@@ -38,7 +38,7 @@ pub fn show_configuration(target: &Target, name: &str, output: &Path) -> Result<
     term.write_line(&format!(
         "│ {} {}",
         "Type:        ".dimmed(),
-        style(target.project_type()).green()
+        style(target.kind()).green()
     ))?;
     term.write_line(&format!(
         "│ {} {}",

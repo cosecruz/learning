@@ -119,7 +119,7 @@ impl Target {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```rust:no_run
     /// use scarff_core::Target;
     ///
     /// let target = Target::rust_cli();
@@ -420,8 +420,8 @@ impl TargetBuilder<HasLanguage> {
         let kind = match self.kind {
             Some(k) => {
                 if !k.is_supported() || !k.lang_capable(language) {
-                    return Err(DomainError::ProjectTypeLanguageMismatch {
-                        project_type: k.to_string(),
+                    return Err(DomainError::ProjectKindLanguageMismatch {
+                        kind: k.to_string(),
                         language: language.to_string(),
                     });
                 }
@@ -440,9 +440,9 @@ impl TargetBuilder<HasLanguage> {
             Some(framework) => {
                 // framework must be compatible with both language and project type
                 if !framework.is_supported() || !framework.is_compatible((language, kind)) {
-                    return Err(DomainError::FrameworkProjectTypeMismatch {
+                    return Err(DomainError::FrameworkProjectKindMismatch {
                         framework: framework.to_string(),
-                        project_type: kind.to_string(),
+                        kind: kind.to_string(),
                     });
                 }
                 framework
@@ -1507,7 +1507,7 @@ mod tests {
 
         assert!(matches!(
             result,
-            Err(DomainError::ProjectTypeLanguageMismatch { .. })
+            Err(DomainError::ProjectKindLanguageMismatch { .. })
         ));
     }
 

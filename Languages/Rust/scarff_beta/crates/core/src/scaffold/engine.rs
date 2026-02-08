@@ -5,7 +5,7 @@ use crate::{
     errors::CoreResult,
     scaffold::{
         filesystem::RealFilesystem,
-        validator::Validator,
+        // validator::Validator,
         writer::{FileWriter, Writer},
     },
     template::{Store, TemplateRenderer, TemplateResolver},
@@ -21,12 +21,12 @@ use tracing::{info, instrument};
 /// # Examples
 ///
 /// ```rust,no_run
-/// use scarff_core::{Engine, Target, Language, ProjectType, Architecture};
+/// use scarff_core::{Engine, Target, Language, ProjectKind, Architecture};
 ///
 /// let engine = Engine::new();
 /// let target = Target::builder()
 ///     .language(Language::Rust)
-///     .project_type(ProjectType::Cli)
+///     .kind(ProjectKind::Cli)
 ///     .architecture(Architecture::Layered)
 ///     .resolve()?;
 ///
@@ -36,7 +36,7 @@ use tracing::{info, instrument};
 pub struct Engine {
     resolver: TemplateResolver,
     renderer: TemplateRenderer,
-    validator: Validator,
+    // validator: Validator,
     writer: FileWriter,
 }
 
@@ -60,7 +60,7 @@ impl Engine {
         Self {
             resolver: TemplateResolver::new(store),
             renderer: TemplateRenderer::new(),
-            validator: Validator::new(),
+            // validator: Validator::new(),
             writer: FileWriter::new(Box::new(RealFilesystem)),
         }
     }
@@ -78,7 +78,7 @@ impl Engine {
         Self {
             resolver: TemplateResolver::new(Box::new(store)),
             renderer: TemplateRenderer::new(),
-            validator: Validator::new(),
+            // validator: Validator::new(),
             writer: FileWriter::new(filesystem),
         }
     }
@@ -143,7 +143,7 @@ impl Engine {
 
         // 1. Validate target (defensive, should already be valid from builder)
         info!("Validating target");
-        self.validator.validate(&target)?;
+        // self.validator.validate(&target)?;
 
         // 2. Resolve template
         info!("Resolving template");
@@ -186,7 +186,7 @@ impl Engine {
                 name: t.metadata.name.to_string(),
                 description: t.metadata.description.to_string(),
                 language: t.matcher.language.to_string(),
-                project_type: t.matcher.project_type.to_string(),
+                kind: t.matcher.kind.to_string(),
                 architecture: t.matcher.architecture.to_string(),
                 framework: t.matcher.framework.as_ref().map(|f| f.to_string()),
             })
@@ -206,7 +206,7 @@ impl Engine {
                 name: t.metadata.name.to_string(),
                 description: t.metadata.description.to_string(),
                 language: t.matcher.language.to_string(),
-                project_type: t.matcher.project_type.to_string(),
+                kind: t.matcher.kind.to_string(),
                 architecture: t.matcher.architecture.to_string(),
                 framework: t.matcher.framework.as_ref().map(|f| f.to_string()),
             })
@@ -229,7 +229,7 @@ pub struct TemplateInfo {
     pub name: String,
     pub description: String,
     pub language: String,
-    pub project_type: String,
+    pub kind: String,
     pub architecture: String,
     pub framework: Option<String>,
 }
@@ -237,7 +237,7 @@ pub struct TemplateInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::{Architecture, Language, ProjectType};
+    use crate::domain::{Architecture, Language, ProjectKind};
 
     #[test]
     fn engine_new_loads_builtin_templates() {
@@ -254,7 +254,7 @@ mod tests {
 
     //     let target = Target::builder()
     //         .language(Language::Rust)
-    //         .project_type(ProjectType::Cli)
+    //         .kind(ProjectKind::Cli)
     //         .architecture(Architecture::Layered)
     //         .resolve()
     //         .unwrap();
@@ -274,8 +274,10 @@ mod tests {
 
         let target = Target::builder()
             .language(Language::Rust)
-            .project_type(ProjectType::Cli)
+            .kind(ProjectKind::Cli)
+            .unwrap()
             .architecture(Architecture::Layered)
+            .unwrap()
             .build()
             .unwrap();
 

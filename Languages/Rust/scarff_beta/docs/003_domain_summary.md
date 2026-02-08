@@ -154,7 +154,7 @@ use crate::domain::{
 TargetMatcher {
     language: Some(Language::Rust),  // Option
     framework: None,
-    project_type: Some(ProjectType::Cli),
+    kind: Some(ProjectKind::Cli),
     architecture: None,
 }
 
@@ -162,7 +162,7 @@ TargetMatcher {
 TargetMatcher {
     language: Language::Rust,  // Required
     framework: None,
-    project_type: ProjectType::Cli,
+    kind: ProjectKind::Cli,
     architecture: Architecture::Layered,
 }
 ```
@@ -313,7 +313,7 @@ fn rust_cli_layered() -> Template {
         matcher: TargetMatcher {
             language: Language::Rust,
             framework: None,
-            project_type: ProjectType::Cli,
+            kind: ProjectKind::Cli,
             architecture: Architecture::Layered,
         },
         tree: TemplateTree::new()

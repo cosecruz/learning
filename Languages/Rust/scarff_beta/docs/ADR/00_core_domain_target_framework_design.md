@@ -88,7 +88,7 @@ This is the **minimum sane design**.
 
 ```rust
 #[derive(Debug, Clone)]
-pub enum ProjectType {
+pub enum ProjectKind {
     Cli,
     Backend,
     Frontend,
@@ -139,18 +139,18 @@ impl Framework {
         }
     }
 
-    pub fn supports(&self, project: &ProjectType) -> bool {
+    pub fn supports(&self, project: &ProjectKind) -> bool {
         matches!(
             (self, project),
-            (Framework::Axum, ProjectType::Backend)
-                | (Framework::Actix, ProjectType::Backend)
-                | (Framework::FastApi, ProjectType::Backend)
-                | (Framework::Django, ProjectType::Backend)
-                | (Framework::Express, ProjectType::Backend)
-                | (Framework::NestJs, ProjectType::Backend)
-                | (Framework::NextJs, ProjectType::Frontend | ProjectType::Fullstack)
-                | (Framework::React, ProjectType::Frontend)
-                | (Framework::Vue, ProjectType::Frontend)
+            (Framework::Axum, ProjectKind::Backend)
+                | (Framework::Actix, ProjectKind::Backend)
+                | (Framework::FastApi, ProjectKind::Backend)
+                | (Framework::Django, ProjectKind::Backend)
+                | (Framework::Express, ProjectKind::Backend)
+                | (Framework::NestJs, ProjectKind::Backend)
+                | (Framework::NextJs, ProjectKind::Frontend | ProjectKind::Fullstack)
+                | (Framework::React, ProjectKind::Frontend)
+                | (Framework::Vue, ProjectKind::Frontend)
         )
     }
 }
@@ -238,7 +238,7 @@ The compiler won’t even let you construct it _if you design `Target` properly_
 pub struct Target {
     lang: Language,
     framework: Option<Framework>,
-    project_type: ProjectType,
+    kind: ProjectKind,
 }
 ```
 
@@ -283,7 +283,7 @@ If you want **illegal states to be impossible**:
 pub struct Target<L> {
     lang: L,
     framework: Option<L::Framework>,
-    project_type: ProjectType,
+    kind: ProjectKind,
 }
 ```
 
@@ -337,7 +337,7 @@ This enum is incomplete and misleading — frameworks ≠ languages.
 
 Also:
 
-- `arch: ()` and `project_type: ()` should become real enums ASAP
+- `arch: ()` and `kind: ()` should become real enums ASAP
 - `Target` should validate itself or be built via a constructor
 
 ---

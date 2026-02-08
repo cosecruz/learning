@@ -112,7 +112,7 @@ version = "1.0.0"
 
 [target]
 language = "rust"
-project_type = "web_api"
+kind = "web_api"
 framework = "axum"
 architecture = "layered"
 

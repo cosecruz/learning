@@ -52,7 +52,7 @@ Below are **strong, defensible defaults** used across industry and OSS.
 
 | Dimension    | Default     | Why                                                 |
 | ------------ | ----------- | --------------------------------------------------- |
-| project_type | **Backend** | Rust is overwhelmingly used server-side             |
+| kind         | **Backend** | Rust is overwhelmingly used server-side             |
 | framework    | **Axum**    | Tokio-native, modern, async-first, ecosystem-backed |
 | architecture | **Layered** | Minimal cognitive overhead, universally compatible  |
 
@@ -60,7 +60,7 @@ Below are **strong, defensible defaults** used across industry and OSS.
 
 ---
 
-### If `language = Rust + project_type = Cli`
+### If `language = Rust + kind = Cli`
 
 | Dimension    | Default                    |
 | ------------ | -------------------------- |
@@ -71,7 +71,7 @@ CLI is a first-class Rust citizen; no framework required.
 
 ---
 
-### If `language = Rust + project_type = Worker`
+### If `language = Rust + kind = Worker`
 
 | Dimension    | Default          |
 | ------------ | ---------------- |
@@ -99,7 +99,7 @@ Rust users expect:
 
 | Dimension    | Default     | Why                                      |
 | ------------ | ----------- | ---------------------------------------- |
-| project_type | **Backend** | Dominant Python use case                 |
+| kind         | **Backend** | Dominant Python use case                 |
 | framework    | **FastAPI** | Modern, async, type-aware, huge adoption |
 | architecture | **Layered** |                                          |
 
@@ -107,7 +107,7 @@ FastAPI is now the **de facto default** over Django for greenfield APIs.
 
 ---
 
-### If `language = Python + project_type = Scripting`
+### If `language = Python + kind = Scripting`
 
 | Dimension    | Default     |
 | ------------ | ----------- |
@@ -116,7 +116,7 @@ FastAPI is now the **de facto default** over Django for greenfield APIs.
 
 ---
 
-### If `language = Python + project_type = Backend + opinionated`
+### If `language = Python + kind = Backend + opinionated`
 
 If user _explicitly_ asks for:
 
@@ -145,7 +145,7 @@ TypeScript is multi-modal, so we must assume **frontend first**, unless told oth
 
 | Dimension    | Default                                                 | Why                  |
 | ------------ | ------------------------------------------------------- | -------------------- |
-| project_type | **Frontend**                                            | Most common TS usage |
+| kind         | **Frontend**                                            | Most common TS usage |
 | framework    | **React**                                               | Ecosystem dominance  |
 | architecture | **Component-based** (or Layered if you want simplicity) |                      |
 
@@ -153,7 +153,7 @@ React is the least surprising default in 2025.
 
 ---
 
-### If `language = TypeScript + project_type = Backend`
+### If `language = TypeScript + kind = Backend`
 
 | Dimension    | Default     |
 | ------------ | ----------- |
@@ -168,7 +168,7 @@ NestJS aligns with:
 
 ---
 
-### If `language = TypeScript + project_type = Fullstack`
+### If `language = TypeScript + kind = Fullstack`
 
 | Dimension    | Default                  |
 | ------------ | ------------------------ |
@@ -204,13 +204,13 @@ Think of defaults as **progressive refinement**:
 
 ---
 
-#### Input: `Language = TypeScript, ProjectType = Backend`
+#### Input: `Language = TypeScript, ProjectKind = Backend`
 
 → NestJS + Layered
 
 ---
 
-#### Input: `Language = Rust, ProjectType = Cli`
+#### Input: `Language = Rust, ProjectKind = Cli`
 
 → No framework + Layered
 
@@ -411,7 +411,7 @@ If user specifies:
 
 ```
 Language = TypeScript
-ProjectType = Backend
+ProjectKind = Backend
 ```
 
 Then:
@@ -497,7 +497,7 @@ Never auto-correct this.
 
 ```
 Language = Rust
-ProjectType = Frontend
+ProjectKind = Frontend
 ```
 
 → error

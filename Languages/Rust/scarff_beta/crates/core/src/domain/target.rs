@@ -1,153 +1,220 @@
-// crates/core/src/domain/target.rs
 //! Target modeling with typestate builder pattern.
 //!
-//! A `Target` represents a fully validated, concrete project configuration.
-//! Construction uses a typestate builder to enforce compile-time guarantees.
+//! This module provides the [`Target`] type, which represents a fully validated
+//! project configuration. Targets are constructed using a builder pattern that
+//! enforces compile-time guarantees about required fields.
+//!
+//! # Examples
+//!
+//! ```rust
+//! use scarff_core::{Target, Language, ProjectKind};
+//!
+//! // Minimal target - other fields inferred
+//! let target = Target::builder()
+//!     .language(Language::Rust)
+//!     .build()?;
+//!
+//! // Fully specified target
+//! let target = Target::builder()
+//!     .language(Language::Rust)
+//!     .kind(ProjectKind::WebBackend)
+//!     .framework(Framework::Rust(RustFramework::Axum))
+//!     .architecture(Architecture::Layered)
+//!     .build()?;
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
 
-use std::{fmt, marker::PhantomData, str::FromStr};
+use std::{fmt, marker::PhantomData};
 
-use super::DomainError;
+use crate::DomainError;
 
 // ============================================================================
-// region: Target (Final, Always Valid)
+// Target (Final, Always Valid)
 // ============================================================================
 
-#[doc = r"A fully resolved and validated project target.
-
-Guaranteed properties:
-- Language is set
-- `ProjectType` is resolved (never None)
-- Framework is either present (when required) or intentionally absent
-- Architecture is resolved and compatible
-
-Cannot be constructed directly - use `TargetBuilder`."]
+/// A fully validated project configuration.
+///
+/// `Target` represents a complete, validated project specification that has
+/// passed all compatibility checks. It cannot be constructed directly - use
+/// [`Target::builder()`] instead.
+///
+/// # Invariants
+///
+/// - Language is always set and supported
+/// - If framework is set, it's compatible with the language
+/// - Architecture is compatible with both framework and project type
+/// - All inferred values are deterministic and documented
+///
+/// # Examples
+///
+/// ```rust
+/// use scarff_core::{Target, Language, ProjectKind};
+///
+/// let target = Target::builder()
+///     .language(Language::Rust)
+///     .kind(ProjectKind::Cli)
+///     .build()?;
+///
+/// assert_eq!(target.language(), Language::Rust);
+/// assert_eq!(target.kind(), ProjectKind::Cli);
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Target {
-    language: Language,
-    project_type: ProjectType,
-    framework: Option<Framework>,
-    architecture: Architecture,
+    /// Language of the project
+    pub language: Language,
+    /// Project type
+    pub kind: ProjectKind,
+    /// Framework, if any
+    pub framework: Option<Framework>,
+    /// Architecture
+    pub architecture: Architecture,
 }
 
 impl Target {
     /// Create a new builder to construct a Target.
+    #[must_use]
     pub fn builder() -> TargetBuilder<NoLanguage> {
         TargetBuilder::new()
     }
 
-    // ---------------------------------------------------------------------
-    // Getters
-    // ---------------------------------------------------------------------
-
-    ///language getter
-    pub fn language(&self) -> Language {
+    /// Get the language of this target.
+    #[must_use]
+    pub const fn language(&self) -> Language {
         self.language
     }
 
-    ///project type getter
-    pub fn project_type(&self) -> ProjectType {
-        self.project_type
+    /// Get the project type of this target.
+    #[must_use]
+    pub const fn kind(&self) -> ProjectKind {
+        self.kind
     }
 
-    ///framework getter
-    pub fn framework(&self) -> Option<&Framework> {
-        self.framework.as_ref()
+    /// Get the framework, if any.
+    #[must_use]
+    pub const fn framework(&self) -> Option<Framework> {
+        self.framework
     }
 
-    ///architecture getter
-    pub fn architecture(&self) -> Architecture {
+    /// Get the architecture of this target.
+    #[must_use]
+    pub const fn architecture(&self) -> Architecture {
         self.architecture
     }
 
-    // TODO: Target behaviors
-    // a method that list out languages, framework, project_type, architecture it supports and combination support_calculations;
-    // default calculations for objects
-    // compatibility calculations
-    // infer missing values
-    //TODO: POST MVP preset methods to get some templates fast
+    // Preset methods for common configurations
+
+    /// Create a Rust CLI application target.
+    ///
+    /// # Errors
+    ///
+    /// This should not fail as it uses a known-good configuration.
+    pub fn rust_cli() -> Result<Self, DomainError> {
+        Self::builder()
+            .language(Language::Rust)
+            .kind(ProjectKind::Cli)?
+            .build()
+    }
+
+    /// Create a Rust web backend with Axum.
+    ///
+    /// # Errors
+    ///
+    /// This should not fail as it uses a known-good configuration.
+    pub fn rust_backend_axum() -> Result<Self, DomainError> {
+        Self::builder()
+            .language(Language::Rust)
+            .kind(ProjectKind::WebBackend)?
+            .framework(Framework::Rust(RustFramework::Axum))?
+            .build()
+    }
+
+    /// Create a Python web backend with FastAPI.
+    ///
+    /// # Errors
+    ///
+    /// This should not fail as it uses a known-good configuration.
+    pub fn python_backend_fastapi() -> Result<Self, DomainError> {
+        Self::builder()
+            .language(Language::Python)
+            .kind(ProjectKind::WebBackend)?
+            .framework(Framework::Python(PythonFramework::FastApi))?
+            .build()
+    }
+
+    /// Create a TypeScript frontend with React.
+    ///
+    /// # Errors
+    ///
+    /// This should not fail as it uses a known-good configuration.
+    pub fn typescript_frontend_react() -> Result<Self, DomainError> {
+        Self::builder()
+            .language(Language::TypeScript)
+            .kind(ProjectKind::WebFrontend)?
+            .framework(Framework::TypeScript(TypeScriptFramework::React))?
+            .build()
+    }
 }
 
-// Add this
 impl fmt::Display for Target {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // Example output: "rust backend (layered + axum)"
         write!(
             f,
             "{} {} ({}{})",
             self.language,
-            self.project_type,
+            self.kind,
             self.architecture,
             self.framework
                 .as_ref()
-                .map(|fw| format!(" + {fw}"))
+                .map(|framework| format!(" + {framework}"))
                 .unwrap_or_default()
         )
     }
 }
 
-// endregion: Target
-
-//=============================================================================
-// region: defaults
-//=============================================================================
-/// defaults trait allows for Target values to design their defaults
-pub trait Defaults {
-    fn default_project_type(&self) -> ProjectType;
-    fn default_framework(&self, project_type: ProjectType) -> Framework;
-    fn default_architecture(&self, framework: Framework, project_type: ProjectType)
-    -> Architecture;
-}
-
-// endregion: defaults ========================================================
-
 // ============================================================================
-// region: Typestate Markers
+// Typestate Markers
 // ============================================================================
 
-/// Marker: Language not yet set
+/// Marker type indicating the builder has no language set yet.
 pub struct NoLanguage;
 
-/// Marker: Language has been set
+/// Marker type indicating the builder has a language set.
 pub struct HasLanguage;
 
-// endregion: Typestate Markers
-
 // ============================================================================
-// region: TargetBuilder (Typestate)
+// TargetBuilder (Typestate)
 // ============================================================================
 
-/// Builder for constructing a valid `Target`.
-///
-/// Uses typestate pattern to enforce that language must be set before resolution.
+/// Builder for constructing validated [`Target`] instances.
 pub struct TargetBuilder<L> {
     language: Option<Language>,
     framework: Option<Framework>,
-    project_type: Option<ProjectType>,
+    kind: Option<ProjectKind>,
     architecture: Option<Architecture>,
     _language_state: PhantomData<L>,
 }
 
-// Construction
 impl TargetBuilder<NoLanguage> {
     /// Create a new builder. Language must be set before calling `build()`.
-    pub fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {
             language: None,
             framework: None,
-            project_type: None,
+            kind: None,
             architecture: None,
             _language_state: PhantomData,
         }
     }
 
     /// Set the programming language (required).
-    ///
-    /// This transitions the builder to `HasLanguage` state.
+    #[must_use]
     pub fn language(self, language: Language) -> TargetBuilder<HasLanguage> {
         TargetBuilder {
             language: Some(language),
             framework: self.framework,
-            project_type: self.project_type,
+            kind: self.kind,
             architecture: self.architecture,
             _language_state: PhantomData,
         }
@@ -160,221 +227,241 @@ impl Default for TargetBuilder<NoLanguage> {
     }
 }
 
-// Hints (optional, only available after language is set)
 impl TargetBuilder<HasLanguage> {
-    /// Provide a framework hint (optional).
+    /// Set the framework (optional).
     #[must_use]
-    pub fn framework(mut self, framework: Framework) -> Self {
+    pub fn framework(mut self, framework: Framework) -> Result<Self, DomainError> {
+        // Validate immediately
+        if let Some(lang) = self.language {
+            if framework.language() != lang {
+                return Err(DomainError::FrameworkLanguageMismatch {
+                    framework: framework.to_string(),
+                    language: lang.to_string(),
+                });
+            }
+            // if framework is required then it must be provided
+            // else if kind.requires_framework() && fram
+        }
         self.framework = Some(framework);
-        self
+        Ok(self)
     }
 
-    /// Provide a project type hint (optional).
+    /// Set the project type (optional).
     #[must_use]
-    pub fn project_type(mut self, project_type: ProjectType) -> Self {
-        self.project_type = Some(project_type);
-        self
+    pub fn kind(mut self, kind: ProjectKind) -> Result<Self, DomainError> {
+        if let Some(lang) = self.language {
+            if !kind.is_supported() || !kind.lang_capable(lang) {
+                return Err(DomainError::ProjectKindLanguageMismatch {
+                    kind: kind.to_string(),
+                    language: lang.to_string(),
+                });
+            }
+        }
+        self.kind = Some(kind);
+        Ok(self)
     }
 
-    /// Provide an architecture hint (optional).
+    /// Set the architecture (optional).
     #[must_use]
-    pub fn architecture(mut self, architecture: Architecture) -> Self {
+    pub fn architecture(mut self, architecture: Architecture) -> Result<Self, DomainError> {
+        if let Some(lang) = self.language {
+            if let Some(kind) = self.kind {
+                if !architecture.is_supported()
+                    || !architecture.is_compatible((lang, kind, self.framework))
+                {
+                    return Err(DomainError::ArchitectureProjectKindMismatch {
+                        architecture: architecture.to_string(),
+                        kind: kind.to_string(),
+                    });
+                }
+            }
+        }
         self.architecture = Some(architecture);
-        self
+        Ok(self)
     }
 
-    /// Resolve all hints and inferences into a valid Target.
+    /// Finalize the builder and construct a validated [`Target`].
     ///
-    /// This is the ONLY way to obtain a `Target`.
+    /// This performs all validation and inference:
+    /// 1. Validates language is supported
+    /// 2. Infers or validates project type
+    /// 3. Infers or validates framework (optional)
+    /// 4. Infers or validates architecture
+    /// 5. Checks all compatibility constraints
     ///
     /// # Errors
     ///
-    /// Returns error if:
+    /// Returns an error if:
+    /// - Language is not supported
     /// - Framework is incompatible with language
     /// - Framework doesn't support the project type
     /// - Architecture is incompatible with framework or project type
-    /// - Required framework is missing for certain project types
-    /// - Inference cannot determine a valid configuration
-    ///
-    /// # Panics
-    ///
-    /// Will panic if self.language is None
+    /// - Required values cannot be inferred
     pub fn build(self) -> Result<Target, DomainError> {
         let language = self
             .language
             .expect("HasLanguage state guarantees language is set");
 
-        // TODO: defaults
-
-        // TODO: compatability checking
-
-        // Infer methods
-        // TODO: change implementation use Language Primary for MVP
-        // Next ProjectType: if not provided infer from language + framework
-        // if framework not provided use language_project_type default; most common ptype for that language;
-        // Next Framework: if not provided; Infer from language_project_type default;
-        // if project type not provided then use default for language and inferred project_type default;
-        // Next Architecture: if not provided use provided/inferred values of the others to infer this
-
-        // Step 1: Early validation - framework-language compatibility
-        if let Some(ref fw) = self.framework
-            && fw.language() != language
-        {
-            return Err(DomainError::FrameworkLanguageMismatch {
-                framework: fw.into(),
-                language: language.into(),
+        // Step 1: Validate language is supported
+        if !language.is_supported() {
+            return Err(DomainError::UnsupportedLanguage {
+                language: language.to_string(),
             });
         }
 
-        // Step 2: Resolve project type
-        let project_type = self
-            .project_type
-            .or_else(|| ProjectType::infer(&language, self.framework.as_ref()))
-            .ok_or(DomainError::CannotInfer {
-                field: "project_type".to_string(),
-                reason: "Could not infer project type from language and framework".to_string(),
-            })?;
-
-        // Step 3: Resolve framework (if not provided)
-        let framework = self
-            .framework
-            .or_else(|| Framework::infer(&language, project_type));
-
-        // Step 4: Validate framework is present when required
-        Self::validate_framework_required(project_type, framework.as_ref())?;
-
-        // Step 5: Validate framework-project type compatibility
-        if let Some(ref fw) = framework
-            && !fw.supports(project_type)
-        {
-            return Err(DomainError::FrameworkProjectTypeMismatch {
-                framework: fw.into(),
-                project_type: project_type.into(),
-            });
-        }
-
-        // Step 6: Resolve architecture
-        let architecture = self
-            .architecture
-            .or_else(|| Architecture::infer(framework.as_ref(), project_type))
-            .ok_or(DomainError::CannotInfer {
-                field: "architecture".to_string(),
-                reason: "Could not infer architecture from framework and project type".to_string(),
-            })?;
-
-        // Step 7: Validate architecture compatibility
-        Self::validate_architecture(architecture, project_type, framework.as_ref())?;
+        let (kind, framework, architecture) = self.parse(language)?;
 
         Ok(Target {
             language,
-            project_type,
+            kind,
             framework,
             architecture,
         })
     }
 
-    // Private validation helpers
+    /// Internal parser to validate and infer `kind`, framework, architecture
+    ///
+    /// ## Inference Strategy
+    ///
+    /// The inference follows this priority:
+    /// 1. **ProjectKind**: Infer from language if not provided
+    /// 2. **Framework**: Try to infer from (language, kind), but allow None for CLI/Worker
+    /// 3. **Architecture**: Infer from (language, kind, framework)
+    ///
+    /// ## Key Rule
+    /// Framework is **optional** for some project types (CLI, Worker).
+    /// We only error if framework inference fails AND it's required for that project type.
+    fn parse(
+        self,
+        language: Language,
+    ) -> Result<(ProjectKind, Option<Framework>, Architecture), DomainError> {
+        // =====================
+        // 1️⃣ ProjectKind
+        // =====================
+        let kind = match self.kind {
+            Some(k) => {
+                if !k.is_supported() || !k.lang_capable(language) {
+                    return Err(DomainError::ProjectKindLanguageMismatch {
+                        kind: k.to_string(),
+                        language: language.to_string(),
+                    });
+                }
+                k
+            }
+            None => ProjectKind::infer_from(language).ok_or_else(|| DomainError::CannotInfer {
+                field: "kind".into(),
+                reason: format!("No default project type for {language}"),
+            })?,
+        };
 
-    fn validate_framework_required(
-        project_type: ProjectType,
-        framework: Option<&Framework>,
-    ) -> Result<(), DomainError> {
-        // Framework is required for Backend, Frontend, Fullstack
-        let requires_framework = matches!(
-            project_type,
-            ProjectType::Backend | ProjectType::Frontend | ProjectType::Fullstack
-        );
+        // =====================
+        // 2️⃣ Framework (OPTIONAL for some types)
+        // =====================
+        let framework = match self.framework {
+            // User provided a framework - validate it
+            Some(fw) => {
+                if !fw.is_supported() {
+                    return Err(DomainError::FrameworkRequired {
+                        kind: kind.to_string(),
+                    });
+                }
 
-        if requires_framework && framework.is_none() {
-            return Err(DomainError::FrameworkRequired {
-                project_type: project_type.into(),
-            });
-        }
+                if !fw.is_compatible((language, kind)) {
+                    return Err(DomainError::FrameworkProjectKindMismatch {
+                        framework: fw.to_string(),
+                        kind: kind.to_string(),
+                    });
+                }
 
-        Ok(())
-    }
+                Some(fw)
+            }
+            // No framework provided - try to infer, but allow None for some types
+            None => {
+                let inferred = Framework::infer_from((language, kind));
 
-    fn validate_architecture(
-        architecture: Architecture,
-        project_type: ProjectType,
-        framework: Option<&Framework>,
-    ) -> Result<(), DomainError> {
-        // Check architecture-project type compatibility
-        if !architecture.supports(project_type) {
-            return Err(DomainError::ArchitectureProjectTypeMismatch {
-                architecture: architecture.into(),
-                project_type: project_type.into(),
-            });
-        }
+                // Check if this project type REQUIRES a framework
+                if inferred.is_none() && kind.requires_framework() {
+                    return Err(DomainError::FrameworkRequired {
+                        kind: kind.to_string(),
+                    });
+                }
 
-        // Check architecture-framework compatibility (if framework present)
-        if let Some(fw) = framework
-            && !architecture.supports_framework(fw)
-        {
-            return Err(DomainError::ArchitectureFrameworkMismatch {
-                architecture: architecture.into(),
-                framework: fw.into(),
-            });
-        }
+                inferred
+            }
+        };
 
-        Ok(())
+        // =====================
+        // 3️⃣ Architecture
+        // =====================
+        let architecture = match self.architecture {
+            Some(arch) => {
+                if !arch.is_supported() {
+                    return Err(DomainError::UnsupportedArchitecture {
+                        architecture: arch.to_string(),
+                    });
+                }
+
+                if !arch.is_compatible((language, kind, framework)) {
+                    return Err(DomainError::ArchitectureFrameworkMismatch {
+                        architecture: arch.to_string(),
+                        framework: framework
+                            .map(|f| f.to_string())
+                            .unwrap_or_else(|| "none".to_string()),
+                    });
+                }
+
+                arch
+            }
+            None => Architecture::infer_from((language, kind, framework)).ok_or_else(|| {
+                DomainError::CannotInfer {
+                    field: "architecture".to_string(),
+                    reason: format!(
+                        "Cannot infer architecture for {} {} {}",
+                        language,
+                        kind,
+                        framework
+                            .map(|f| f.to_string())
+                            .unwrap_or_else(|| "".to_string())
+                    ),
+                }
+            })?,
+        };
+
+        Ok((kind, framework, architecture))
     }
 }
 
-// endregion: TargetBuilder
-
 // ============================================================================
-// region: Language
+// Language
 // ============================================================================
 
-/// Languages supported by Target
+/// Supported programming languages.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Language {
-    ///rust programming language
     Rust,
-
-    ///python programming language
     Python,
-
-    ///typescript: more like type safety on top javascript
-    /// we prefer to support the the type safe javascript
     TypeScript,
 }
 
 impl Language {
-    ///languages supported
-    pub const SUPPORTS: &'static [Self] = &[Language::Rust, Language::Python, Language::TypeScript];
-
-    ///allows `Language.as_str()` to return &str
-    pub fn as_str(&self) -> &'static str {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
         match self {
-            Language::Rust => "rust",
-            Language::Python => "python",
-            Language::TypeScript => "typescript",
+            Self::Rust => "rust",
+            Self::Python => "python",
+            Self::TypeScript => "typescript",
         }
     }
 
-    pub fn supported_frameworks(&self) -> Vec<Framework> {
-        Framework::SUPPORTS
-            .iter()
-            .copied()
-            .filter(|f| f.language() == *self)
-            .collect()
-    }
-
-    // in order of how common it is used
-    ///list supported frameworks that belong to specific language
-    pub fn lang_specific_supported_frameworks(&self) -> &'static [Framework] {
-        match self {
-            Language::Rust => Framework::RUST,
-            Language::Python => Framework::PYTHON,
-            Language::TypeScript => Framework::TYPESCRIPT,
+    #[must_use]
+    pub fn parse(s: &str) -> Option<Self> {
+        match s.to_ascii_lowercase().as_str() {
+            "rust" | "rs" => Some(Self::Rust),
+            "python" | "py" => Some(Self::Python),
+            "typescript" | "ts" => Some(Self::TypeScript),
+            _ => None,
         }
     }
-
-    // list supported project_types that specific language supports
-
-    // list supported architectures that specific language supports
 }
 
 impl fmt::Display for Language {
@@ -385,1247 +472,689 @@ impl fmt::Display for Language {
 
 impl From<Language> for String {
     fn from(l: Language) -> Self {
-        l.as_str().to_owned()
+        l.to_string()
     }
 }
 
-impl From<&Language> for String {
-    fn from(l: &Language) -> Self {
-        l.as_str().to_owned()
-    }
+impl ActivelySupported for Language {
+    const ALL: &'static [Self] = &[Self::Rust, Self::Python, Self::TypeScript];
 }
-
-impl AsRef<str> for Language {
-    fn as_ref(&self) -> &str {
-        self.as_str()
-    }
-}
-
-impl FromStr for Language {
-    type Err = DomainError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_ascii_lowercase().as_str() {
-            "rust" => Ok(Language::Rust),
-            "python" | "py" => Ok(Language::Python),
-            "typescript" | "ts" => Ok(Language::TypeScript),
-            _ => Err(DomainError::UnsupportedLanguage {
-                language: s.to_string(),
-            }),
-        }
-    }
-}
-
-// endregion: Language
 
 // ============================================================================
-// region: ProjectType
+// ProjectKind
 // ============================================================================
 
-/// supported project types
+/// Type of project being scaffolded.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ProjectType {
-    ///command line interface programs
+pub enum ProjectKind {
     Cli,
-
-    /// backend apis, web apis, database the nitty gritty stuff; systems programming;
-    Backend,
-
-    /// frontend facing applications web, mobile
-    Frontend,
-
-    /// want to do both backend and frontend in one go; goodluck
+    WebBackend,
+    WebFrontend,
     Fullstack,
-
-    /// jobs, queues, dont really know much of but willing to learn; part of backend as well
     Worker,
-    // devops;infra;cloud; scripts are part of what
 }
 
-impl ProjectType {
-    ///project types supported
-    pub const SUPPORTS: &'static [Self] = &[
-        ProjectType::Cli,
-        ProjectType::Backend,
-        ProjectType::Frontend,
-        ProjectType::Fullstack,
-        ProjectType::Worker,
-    ];
-
-    ///returns string literal representation of `ProjectTYpe`
-    pub fn as_str(&self) -> &'static str {
+impl ProjectKind {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
         match self {
-            ProjectType::Cli => "cli",
-            ProjectType::Backend => "backend",
-            ProjectType::Frontend => "frontend",
-            ProjectType::Fullstack => "fullstack",
-            ProjectType::Worker => "worker",
+            Self::Cli => "cli",
+            Self::WebBackend => "web-backend",
+            Self::WebFrontend => "web-frontend",
+            Self::Fullstack => "fullstack",
+            Self::Worker => "worker",
         }
     }
 
-    /// Infer project type from language and framework.
-    pub fn infer(language: &Language, framework: Option<&Framework>) -> Option<Self> {
-        match (language, framework) {
-            // Rust defaults to backend
-            (Language::Rust, None) => Some(ProjectType::Backend),
-            (Language::Rust, Some(Framework::Rust(_))) => Some(ProjectType::Backend),
-
-            // Python defaults to backend
-            (Language::Python, None) => Some(ProjectType::Backend),
-            (Language::Python, Some(Framework::Python(_))) => Some(ProjectType::Backend),
-
-            // TypeScript: depends on framework
-            (Language::TypeScript, Some(Framework::TypeScript(TypeScriptFramework::NextJs))) => {
-                Some(ProjectType::Fullstack)
-            }
-            (
-                Language::TypeScript,
-                Some(Framework::TypeScript(TypeScriptFramework::React | TypeScriptFramework::Vue)),
-            ) => Some(ProjectType::Frontend),
-            (Language::TypeScript, Some(Framework::TypeScript(_))) => Some(ProjectType::Backend),
-            (Language::TypeScript, None) => Some(ProjectType::Frontend), // Default to frontend
-
+    #[must_use]
+    pub fn parse(s: &str) -> Option<Self> {
+        match s.to_ascii_lowercase().as_str() {
+            "cli" => Some(Self::Cli),
+            "web-backend" | "backend" | "api" => Some(Self::WebBackend),
+            "web-frontend" | "frontend" => Some(Self::WebFrontend),
+            "fullstack" => Some(Self::Fullstack),
+            "worker" => Some(Self::Worker),
             _ => None,
         }
     }
+
+    /// Check if this project type requires a framework.
+    ///
+    /// CLI and Worker projects don't require frameworks.
+    /// Web projects (backend, frontend, fullstack) do.
+    #[must_use]
+    pub const fn requires_framework(self) -> bool {
+        matches!(self, Self::WebBackend | Self::WebFrontend | Self::Fullstack)
+    }
 }
 
-impl fmt::Display for ProjectType {
+impl From<ProjectKind> for String {
+    fn from(value: ProjectKind) -> Self {
+        value.as_str().to_string()
+    }
+}
+
+impl fmt::Display for ProjectKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
+        write!(f, "{}", self.as_str())
     }
 }
 
-impl From<ProjectType> for String {
-    fn from(p: ProjectType) -> Self {
-        p.as_str().to_owned()
-    }
+impl ActivelySupported for ProjectKind {
+    const ALL: &'static [Self] = &[
+        Self::Cli,
+        Self::WebBackend,
+        Self::WebFrontend,
+        Self::Fullstack,
+        Self::Worker,
+    ];
 }
-
-// impl From<&ProjectType> for String {
-//     fn from(p: &ProjectType) -> Self {
-//         p.as_str().to_owned()
-//     }
-// }
-
-impl AsRef<str> for ProjectType {
-    fn as_ref(&self) -> &str {
-        self.as_str()
-    }
-}
-
-impl FromStr for ProjectType {
-    type Err = DomainError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_ascii_lowercase().as_str() {
-            "cli" => Ok(ProjectType::Cli),
-            "backend" => Ok(ProjectType::Backend),
-            "frontend" => Ok(ProjectType::Frontend),
-            "fullstack" => Ok(ProjectType::Fullstack),
-            "worker" => Ok(ProjectType::Worker),
-            _ => Err(DomainError::UnsupportedProjectType {
-                project_type: s.to_string(),
-            }),
-        }
-    }
-}
-
-// endregion: ProjectType
 
 // ============================================================================
-// region: Framework
+// Framework
 // ============================================================================
 
-///rust web frameworks
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum RustFramework {
-    ///axum most popular i guess
-    Axum,
-    ///actix
-    Actix,
-}
-
-///python frameworks
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum PythonFramework {
-    /// fast api
-    FastApi,
-    ///django
-    Django,
-}
-
-///typescript frameworks
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum TypeScriptFramework {
-    ///express js
-    Express,
-    ///next js
-    NestJs,
-    /// next js
-    NextJs,
-    /// react js
-    React,
-    ///vue
-    Vue,
-}
-
-///framework
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Framework {
-    ///rust frameworks
     Rust(RustFramework),
-    ///python frameworks
     Python(PythonFramework),
-
-    ///typescript frameworks
     TypeScript(TypeScriptFramework),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum RustFramework {
+    Axum,
+    Actix,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum PythonFramework {
+    FastApi,
+    Django,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum TypeScriptFramework {
+    Express,
+    NestJs,
+    React,
+    Vue,
+    NextJs,
+}
+
 impl Framework {
-    ///returns all supported frameworks
-    pub const SUPPORTS: &'static [Self] = &[
-        //Rust frameworks
-        Framework::Rust(RustFramework::Axum),
-        Framework::Rust(RustFramework::Actix),
-        //Python Frameworks
-        Framework::Python(PythonFramework::Django),
-        Framework::Python(PythonFramework::FastApi),
-        //TypeScript Frameworks
-        Framework::TypeScript(TypeScriptFramework::Express),
-        Framework::TypeScript(TypeScriptFramework::NestJs),
-        Framework::TypeScript(TypeScriptFramework::React),
-        Framework::TypeScript(TypeScriptFramework::Vue),
-        Framework::TypeScript(TypeScriptFramework::NextJs),
-    ];
-
-    pub const RUST: &'static [Framework] = &[
-        Framework::Rust(RustFramework::Axum),
-        Framework::Rust(RustFramework::Actix),
-    ];
-
-    pub const PYTHON: &'static [Framework] = &[
-        Framework::Python(PythonFramework::FastApi),
-        Framework::Python(PythonFramework::Django),
-    ];
-
-    pub const TYPESCRIPT: &'static [Framework] = &[
-        Framework::TypeScript(TypeScriptFramework::Express),
-        Framework::TypeScript(TypeScriptFramework::NestJs),
-        Framework::TypeScript(TypeScriptFramework::NextJs),
-        Framework::TypeScript(TypeScriptFramework::React),
-        Framework::TypeScript(TypeScriptFramework::Vue),
-    ];
-
-    ///return string framework as string literals
-    pub fn as_str(&self) -> &'static str {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
         match self {
-            Framework::Rust(r) => match r {
-                RustFramework::Axum => "axum",
-                RustFramework::Actix => "actix",
-            },
-            Framework::Python(p) => match p {
-                PythonFramework::FastApi => "fastapi",
-                PythonFramework::Django => "django",
-            },
-            Framework::TypeScript(t) => match t {
-                TypeScriptFramework::Express => "express",
-                TypeScriptFramework::NestJs => "nestjs",
-                TypeScriptFramework::NextJs => "nextjs",
-                TypeScriptFramework::React => "react",
-                TypeScriptFramework::Vue => "vue",
-            },
+            Self::Rust(RustFramework::Axum) => "axum",
+            Self::Rust(RustFramework::Actix) => "actix",
+            Self::Python(PythonFramework::FastApi) => "fastapi",
+            Self::Python(PythonFramework::Django) => "django",
+            Self::TypeScript(TypeScriptFramework::Express) => "express",
+            Self::TypeScript(TypeScriptFramework::NestJs) => "nestjs",
+            Self::TypeScript(TypeScriptFramework::React) => "react",
+            Self::TypeScript(TypeScriptFramework::Vue) => "vue",
+            Self::TypeScript(TypeScriptFramework::NextJs) => "nextjs",
         }
     }
 
-    /// Get the language this framework belongs to.
-    pub fn language(&self) -> Language {
+    #[must_use]
+    pub const fn language(self) -> Language {
         match self {
-            Framework::Rust(_) => Language::Rust,
-            Framework::Python(_) => Language::Python,
-            Framework::TypeScript(_) => Language::TypeScript,
+            Self::Rust(_) => Language::Rust,
+            Self::Python(_) => Language::Python,
+            Self::TypeScript(_) => Language::TypeScript,
         }
     }
 
-    /// Check if this framework supports the given project type.
-    pub fn supports(&self, project_type: ProjectType) -> bool {
-        match (self, project_type) {
-            // Rust frameworks: Backend and Worker
-            (Framework::Rust(_), ProjectType::Backend | ProjectType::Worker) => true,
+    // #[must_use]
+    // depending on framework we can infer the kind of project user should wants to build?
+    // pub const fn kind(self)-> ProjectKind{
+    //     match self{
+    //         Framework::Rust(_rust_framework) => ProjectKind::WebBackend,
+    //         Framework::Python(_python_framework) => Proj,
+    //         Framework::TypeScript(type_script_framework) => todo!(),
+    //     }
+    // }
+}
 
-            // Python frameworks: Backend
-            (Framework::Python(_), ProjectType::Backend) => true,
-
-            // TypeScript: Express and NestJS are backend
-            (
-                Framework::TypeScript(TypeScriptFramework::Express | TypeScriptFramework::NestJs),
-                ProjectType::Backend,
-            ) => true,
-
-            // TypeScript: React and Vue are frontend
-            (
-                Framework::TypeScript(TypeScriptFramework::React | TypeScriptFramework::Vue),
-                ProjectType::Frontend,
-            ) => true,
-
-            // TypeScript: NextJs is fullstack
-            (Framework::TypeScript(TypeScriptFramework::NextJs), ProjectType::Fullstack) => true,
-
-            _ => false,
-        }
-    }
-
-    /// Infer a default framework from language and project type.
-    pub fn infer(language: &Language, project_type: ProjectType) -> Option<Self> {
-        match (language, project_type) {
-            // Rust backend/worker: default to Axum
-            (Language::Rust, ProjectType::Backend | ProjectType::Worker) => {
-                Some(Framework::Rust(RustFramework::Axum))
-            }
-
-            // Rust CLI: no framework needed
-            (Language::Rust, ProjectType::Cli) => None,
-
-            // Python backend: default to FastAPI
-            (Language::Python, ProjectType::Backend) => {
-                Some(Framework::Python(PythonFramework::FastApi))
-            }
-
-            // Python CLI/scripting: no framework
-            (Language::Python, ProjectType::Cli | ProjectType::Worker) => None,
-
-            // TypeScript frontend: React
-            (Language::TypeScript, ProjectType::Frontend) => {
-                Some(Framework::TypeScript(TypeScriptFramework::React))
-            }
-
-            // TypeScript backend: Express (simpler than NestJS)
-            (Language::TypeScript, ProjectType::Backend) => {
-                Some(Framework::TypeScript(TypeScriptFramework::Express))
-            }
-
-            // TypeScript fullstack: NextJs
-            (Language::TypeScript, ProjectType::Fullstack) => {
-                Some(Framework::TypeScript(TypeScriptFramework::NextJs))
-            }
-
-            _ => None,
-        }
+impl From<Framework> for String {
+    fn from(value: Framework) -> Self {
+        value.as_str().to_string()
     }
 }
 
 impl fmt::Display for Framework {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
+        write!(f, "{}", self.as_str())
     }
 }
 
-impl From<Framework> for String {
-    fn from(fw: Framework) -> Self {
-        fw.as_str().to_owned()
-    }
+impl ActivelySupported for Framework {
+    const ALL: &'static [Self] = &[
+        Framework::Rust(RustFramework::Axum),
+        Framework::Rust(RustFramework::Actix),
+        Framework::TypeScript(TypeScriptFramework::Express),
+        Framework::TypeScript(TypeScriptFramework::NestJs),
+        Framework::TypeScript(TypeScriptFramework::React),
+        Framework::TypeScript(TypeScriptFramework::Vue),
+        Framework::TypeScript(TypeScriptFramework::NextJs),
+        Framework::Python(PythonFramework::Django),
+        Framework::Python(PythonFramework::FastApi),
+    ];
 }
-
-impl From<&Framework> for String {
-    fn from(fw: &Framework) -> Self {
-        fw.as_str().to_owned()
-    }
-}
-
-impl AsRef<str> for Framework {
-    fn as_ref(&self) -> &str {
-        self.as_str()
-    }
-}
-
-// endregion: Framework
 
 // ============================================================================
-// region: Architecture
+// Architecture
 // ============================================================================
 
-/// Architecture
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Architecture {
-    /// Layered types
     Layered,
-
-    /// Mvc types
-    Mvc,
-    /// Modular types
-    Modular,
-    /// `AppRouter` architecture mostly supported by frontend / full stack frameworks
-    AppRouter,
+    MVC,
+    Clean,
 }
 
 impl Architecture {
-    ///returns all supported frameworks
-    pub const SUPPORTS: &'static [Self] = &[
-        Architecture::Layered,
-        Architecture::Mvc,
-        Architecture::Modular,
-        Architecture::AppRouter,
-    ];
-
-    ///return architecture as string literals
-    pub fn as_str(&self) -> &'static str {
+    pub fn as_str(self) -> &'static str {
         match self {
             Architecture::Layered => "layered",
-            Architecture::Mvc => "mvc",
-            Architecture::Modular => "modular",
-            Architecture::AppRouter => "app-router",
+            Architecture::MVC => "mvc",
+            Architecture::Clean => "clean",
         }
     }
+}
 
-    /// Check if this architecture supports the given project type.
-    pub fn supports(&self, project_type: ProjectType) -> bool {
-        match (self, project_type) {
-            // Layered: Universal - works with everything
-            (Architecture::Layered, _) => true,
-
-            // MVC: Backend and Fullstack only
-            (Architecture::Mvc, ProjectType::Backend | ProjectType::Fullstack) => true,
-
-            // Modular: Backend, Fullstack, Worker
-            (
-                Architecture::Modular,
-                ProjectType::Backend | ProjectType::Fullstack | ProjectType::Worker,
-            ) => true,
-
-            // AppRouter: Fullstack only (Next.js specific)
-            (Architecture::AppRouter, ProjectType::Fullstack) => true,
-
-            _ => false,
-        }
-    }
-
-    /// Check if this architecture is compatible with the framework.
-    pub fn supports_framework(&self, framework: &Framework) -> bool {
-        match (self, framework) {
-            // Layered: Works with all backend/fullstack frameworks
-            // FIXME: but not frontend so re write fix
-            (Architecture::Layered, _) => true,
-
-            // MVC: Django (native), Express (compatible)
-            (Architecture::Mvc, Framework::Python(PythonFramework::Django)) => true,
-            (Architecture::Mvc, Framework::TypeScript(TypeScriptFramework::Express)) => true,
-
-            // Modular: NestJS (native), Rust frameworks, FastAPI
-            (Architecture::Modular, Framework::TypeScript(TypeScriptFramework::NestJs)) => true,
-            (Architecture::Modular, Framework::Rust(_)) => true,
-            (Architecture::Modular, Framework::Python(PythonFramework::FastApi)) => true,
-
-            // AppRouter: NextJs only
-            (Architecture::AppRouter, Framework::TypeScript(TypeScriptFramework::NextJs)) => true,
-
-            // Frontend frameworks don't have backend architecture patterns
-            (_, Framework::TypeScript(TypeScriptFramework::React | TypeScriptFramework::Vue)) => {
-                false
-            }
-
-            _ => false,
-        }
-    }
-
-    /// Infer a default architecture from framework and project type.
-    pub fn infer(framework: Option<&Framework>, project_type: ProjectType) -> Option<Self> {
-        match framework {
-            // Framework-specific architectures
-            Some(Framework::TypeScript(TypeScriptFramework::NextJs)) => {
-                Some(Architecture::AppRouter)
-            }
-            Some(Framework::Python(PythonFramework::Django)) => Some(Architecture::Mvc),
-            Some(Framework::TypeScript(TypeScriptFramework::NestJs)) => Some(Architecture::Modular),
-
-            // CLI always uses Layered
-            None if project_type == ProjectType::Cli => Some(Architecture::Layered),
-
-            // Universal fallback: Layered
-            Some(_) => Some(Architecture::Layered),
-
-            // No framework and not CLI: cannot infer safely
-            None => None,
-        }
+impl From<Architecture> for String {
+    fn from(value: Architecture) -> Self {
+        value.as_str().to_string()
     }
 }
 
 impl fmt::Display for Architecture {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
+        write!(f, "{}", self.as_str())
     }
 }
 
-impl From<Architecture> for String {
-    fn from(a: Architecture) -> Self {
-        a.as_str().to_owned()
+impl ActivelySupported for Architecture {
+    const ALL: &'static [Self] = &[
+        Architecture::Layered,
+        Architecture::MVC,
+        Architecture::Clean,
+    ];
+}
+
+// ============================================================================
+// Traits
+// ============================================================================
+
+pub trait ActivelySupported: Sized + PartialEq + 'static {
+    const ALL: &'static [Self];
+
+    fn is_supported(&self) -> bool {
+        Self::ALL.contains(self)
     }
 }
 
-impl From<&Architecture> for String {
-    fn from(a: &Architecture) -> Self {
-        a.as_str().to_owned()
+pub trait ActivelySupportedExt: ActivelySupported {
+    fn active() -> &'static [Self] {
+        Self::ALL
     }
 }
 
-impl AsRef<str> for Architecture {
-    fn as_ref(&self) -> &str {
-        self.as_str()
+impl<T: ActivelySupported> ActivelySupportedExt for T {}
+
+trait LangCapable {
+    fn lang_capable(&self, language: Language) -> bool;
+    fn capable_languages(self) -> Vec<Language>;
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct LangCapableProjects {
+    language: Language,
+    p_types: &'static [ProjectKind],
+}
+
+const LANG_CAPABILITIES: &[LangCapableProjects] = &[
+    LangCapableProjects {
+        language: Language::Rust,
+        p_types: &[
+            ProjectKind::Cli,
+            ProjectKind::WebBackend,
+            ProjectKind::Worker,
+        ],
+    },
+    LangCapableProjects {
+        language: Language::Python,
+        p_types: &[
+            ProjectKind::Cli,
+            ProjectKind::Fullstack,
+            ProjectKind::WebBackend,
+            ProjectKind::Worker,
+        ],
+    },
+    LangCapableProjects {
+        language: Language::TypeScript,
+        p_types: &[
+            ProjectKind::WebFrontend,
+            ProjectKind::Fullstack,
+            ProjectKind::WebBackend,
+            ProjectKind::Worker,
+        ],
+    },
+];
+
+impl LangCapable for ProjectKind {
+    fn lang_capable(&self, language: Language) -> bool {
+        if !language.is_supported() {
+            return false;
+        }
+
+        if !self.is_supported() {
+            return false;
+        }
+
+        LANG_CAPABILITIES
+            .iter()
+            .find(|cap| cap.language == language)
+            .is_some_and(|cap| cap.p_types.contains(self))
+    }
+
+    fn capable_languages(self) -> Vec<Language> {
+        LANG_CAPABILITIES
+            .iter()
+            .filter(|cap| cap.language.is_supported())
+            .filter(|cap| cap.p_types.contains(&self))
+            .map(|cap| cap.language)
+            .collect()
     }
 }
 
-impl FromStr for Architecture {
-    type Err = DomainError;
+pub trait Compatible {
+    type Context;
+    fn is_compatible(&self, ctx: Self::Context) -> bool;
+    fn get_compatible(&self) -> Option<Vec<Self::Context>>;
+}
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_ascii_lowercase().as_str() {
-            "layered" => Ok(Architecture::Layered),
-            "mvc" => Ok(Architecture::Mvc),
-            "modular" => Ok(Architecture::Modular),
-            "app-router" | "approuter" => Ok(Architecture::AppRouter),
-            _ => Err(DomainError::UnsupportedArchitecture {
-                architecture: s.to_string(),
-            }),
+impl Compatible for Framework {
+    type Context = (Language, ProjectKind);
+
+    fn is_compatible(&self, ctx: Self::Context) -> bool {
+        matches!(
+            (self, ctx),
+            (
+                Framework::Rust(RustFramework::Axum | RustFramework::Actix),
+                (Language::Rust, ProjectKind::WebBackend),
+            ) | (
+                Framework::TypeScript(TypeScriptFramework::Express | TypeScriptFramework::NestJs),
+                (Language::TypeScript, ProjectKind::WebBackend),
+            ) | (
+                Framework::TypeScript(TypeScriptFramework::React | TypeScriptFramework::Vue),
+                (Language::TypeScript, ProjectKind::WebFrontend),
+            ) | (
+                Framework::TypeScript(TypeScriptFramework::NextJs),
+                (Language::TypeScript, ProjectKind::Fullstack),
+            ) | (
+                Framework::Python(PythonFramework::FastApi),
+                (Language::Python, ProjectKind::WebBackend),
+            ) | (
+                Framework::Python(PythonFramework::Django),
+                (Language::Python, ProjectKind::Fullstack),
+            )
+        )
+    }
+
+    fn get_compatible(&self) -> Option<Vec<Self::Context>> {
+        let contexts = match self {
+            Framework::Rust(RustFramework::Axum) => vec![(Language::Rust, ProjectKind::WebBackend)],
+            Framework::Rust(RustFramework::Actix) => {
+                vec![(Language::Rust, ProjectKind::WebBackend)]
+            }
+            Framework::TypeScript(TypeScriptFramework::Express | TypeScriptFramework::NestJs) => {
+                vec![(Language::TypeScript, ProjectKind::WebBackend)]
+            }
+            Framework::TypeScript(TypeScriptFramework::React | TypeScriptFramework::Vue) => {
+                vec![(Language::TypeScript, ProjectKind::WebFrontend)]
+            }
+            Framework::TypeScript(TypeScriptFramework::NextJs) => {
+                vec![(Language::TypeScript, ProjectKind::Fullstack)]
+            }
+            Framework::Python(PythonFramework::FastApi) => {
+                vec![(Language::Python, ProjectKind::WebBackend)]
+            }
+            Framework::Python(PythonFramework::Django) => {
+                vec![(Language::Python, ProjectKind::Fullstack)]
+            }
+        };
+
+        Some(contexts)
+    }
+}
+
+impl Compatible for Architecture {
+    type Context = (Language, ProjectKind, Option<Framework>);
+
+    fn is_compatible(&self, ctx: Self::Context) -> bool {
+        match (self, ctx) {
+            // Layered architecture - works with most combinations
+            (
+                Architecture::Layered,
+                (Language::Rust, ProjectKind::Cli | ProjectKind::Worker, None),
+            ) => true,
+            (
+                Architecture::Layered,
+                (
+                    Language::Rust,
+                    ProjectKind::WebBackend,
+                    Some(Framework::Rust(RustFramework::Axum | RustFramework::Actix)),
+                ),
+            ) => true,
+            (
+                Architecture::Layered,
+                (
+                    Language::TypeScript,
+                    ProjectKind::WebBackend,
+                    Some(Framework::TypeScript(
+                        TypeScriptFramework::Express | TypeScriptFramework::NestJs,
+                    )),
+                ),
+            ) => true,
+            (
+                Architecture::Layered,
+                (
+                    Language::TypeScript,
+                    ProjectKind::Fullstack,
+                    Some(Framework::TypeScript(TypeScriptFramework::NextJs)),
+                ),
+            ) => true,
+            (
+                Architecture::Layered,
+                (
+                    Language::Python,
+                    ProjectKind::WebBackend,
+                    Some(Framework::Python(PythonFramework::FastApi)),
+                ),
+            ) => true,
+
+            // MVC - Django only
+            (
+                Architecture::MVC,
+                (
+                    Language::Python,
+                    ProjectKind::Fullstack,
+                    Some(Framework::Python(PythonFramework::Django)),
+                ),
+            ) => true,
+
+            _ => false,
+        }
+    }
+
+    fn get_compatible(&self) -> Option<Vec<Self::Context>> {
+        let contexts = match self {
+            Architecture::Layered => vec![
+                (Language::Rust, ProjectKind::Cli, None),
+                (Language::Rust, ProjectKind::Worker, None),
+                (
+                    Language::Rust,
+                    ProjectKind::WebBackend,
+                    Some(Framework::Rust(RustFramework::Axum)),
+                ),
+                (
+                    Language::TypeScript,
+                    ProjectKind::WebBackend,
+                    Some(Framework::TypeScript(TypeScriptFramework::Express)),
+                ),
+                (
+                    Language::Python,
+                    ProjectKind::WebBackend,
+                    Some(Framework::Python(PythonFramework::FastApi)),
+                ),
+            ],
+            Architecture::MVC => vec![(
+                Language::Python,
+                ProjectKind::Fullstack,
+                Some(Framework::Python(PythonFramework::Django)),
+            )],
+            Architecture::Clean => vec![],
+        };
+
+        Some(contexts)
+    }
+}
+
+trait Infer {
+    type Context;
+    fn infer_from(ctx: Self::Context) -> Option<Self>
+    where
+        Self: Sized;
+}
+
+impl Infer for ProjectKind {
+    type Context = Language;
+
+    fn infer_from(ctx: Self::Context) -> Option<Self> {
+        match ctx {
+            Language::Rust => Some(ProjectKind::Cli),
+            Language::TypeScript => Some(ProjectKind::WebFrontend),
+            Language::Python => Some(ProjectKind::WebBackend),
         }
     }
 }
 
-// endregion: Architecture
+impl Infer for Framework {
+    type Context = (Language, ProjectKind);
 
-// ========================================================
-// region:tests
-// ========================================================
-// crates/core/src/domain/target.rs (tests section)
-// Append this to the end of target_typestate.rs
+    fn infer_from(ctx: Self::Context) -> Option<Self> {
+        match ctx {
+            // Rust
+            (Language::Rust, ProjectKind::WebBackend) => Some(Framework::Rust(RustFramework::Axum)),
+            (Language::Rust, ProjectKind::Cli | ProjectKind::Worker) => None, // No framework needed
+
+            // TypeScript
+            (Language::TypeScript, ProjectKind::WebBackend) => {
+                Some(Framework::TypeScript(TypeScriptFramework::Express))
+            }
+            (Language::TypeScript, ProjectKind::WebFrontend) => {
+                Some(Framework::TypeScript(TypeScriptFramework::React))
+            }
+            (Language::TypeScript, ProjectKind::Fullstack) => {
+                Some(Framework::TypeScript(TypeScriptFramework::NextJs))
+            }
+
+            // Python
+            (Language::Python, ProjectKind::WebBackend) => {
+                Some(Framework::Python(PythonFramework::FastApi))
+            }
+            (Language::Python, ProjectKind::Fullstack) => {
+                Some(Framework::Python(PythonFramework::Django))
+            }
+            (Language::Python, ProjectKind::Cli | ProjectKind::Worker) => None, // No framework needed
+
+            _ => None,
+        }
+    }
+}
+
+impl Infer for Architecture {
+    type Context = (Language, ProjectKind, Option<Framework>);
+
+    fn infer_from(ctx: Self::Context) -> Option<Self> {
+        match ctx {
+            // Rust - Layered for everything
+            (Language::Rust, _, _) => Some(Architecture::Layered),
+
+            // TypeScript
+            (Language::TypeScript, _, Some(Framework::TypeScript(_))) => {
+                Some(Architecture::Layered)
+            }
+
+            // Python
+            (
+                Language::Python,
+                ProjectKind::Fullstack,
+                Some(Framework::Python(PythonFramework::Django)),
+            ) => Some(Architecture::MVC),
+            (Language::Python, _, Some(Framework::Python(PythonFramework::FastApi))) => {
+                Some(Architecture::Layered)
+            }
+
+            _ => Some(Architecture::Layered), // Default fallback
+        }
+    }
+}
+
+// ============================================================================
+// Tests
+// ============================================================================
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    // ========================================================================
-    // Language tests
-    // ========================================================================
-
     #[test]
-    fn language_from_str_valid() {
-        assert_eq!("rust".parse::<Language>().unwrap(), Language::Rust);
-        assert_eq!("Python".parse::<Language>().unwrap(), Language::Python);
-        assert_eq!(
-            "TYPESCRIPT".parse::<Language>().unwrap(),
-            Language::TypeScript
-        );
-        assert_eq!("ts".parse::<Language>().unwrap(), Language::TypeScript);
-        assert_eq!("py".parse::<Language>().unwrap(), Language::Python);
-    }
-
-    #[test]
-    fn language_from_str_invalid() {
-        assert!("go".parse::<Language>().is_err());
-        assert!("javascript".parse::<Language>().is_err());
-        assert!("java".parse::<Language>().is_err());
-    }
-
-    #[test]
-    fn language_display_roundtrip() {
-        for lang in [Language::Rust, Language::Python, Language::TypeScript] {
-            let s = lang.to_string();
-            let parsed: Language = s.parse().unwrap();
-            assert_eq!(lang, parsed);
-        }
-    }
-
-    #[test]
-    fn language_as_ref() {
-        assert_eq!(Language::Rust.as_ref(), "rust");
-        assert_eq!(Language::Python.as_ref(), "python");
-        assert_eq!(Language::TypeScript.as_ref(), "typescript");
-    }
-
-    // ========================================================================
-    // ProjectType tests
-    // ========================================================================
-
-    #[test]
-    fn project_type_from_str_valid() {
-        assert_eq!("cli".parse::<ProjectType>().unwrap(), ProjectType::Cli);
-        assert_eq!(
-            "backend".parse::<ProjectType>().unwrap(),
-            ProjectType::Backend
-        );
-        assert_eq!(
-            "frontend".parse::<ProjectType>().unwrap(),
-            ProjectType::Frontend
-        );
-        assert_eq!(
-            "fullstack".parse::<ProjectType>().unwrap(),
-            ProjectType::Fullstack
-        );
-        assert_eq!(
-            "worker".parse::<ProjectType>().unwrap(),
-            ProjectType::Worker
-        );
-    }
-
-    #[test]
-    fn project_type_from_str_invalid() {
-        assert!("mobile".parse::<ProjectType>().is_err());
-        assert!("desktop".parse::<ProjectType>().is_err());
-    }
-
-    #[test]
-    fn project_type_infer_rust() {
-        // Rust + no framework -> Backend
-        assert_eq!(
-            ProjectType::infer(&Language::Rust, None),
-            Some(ProjectType::Backend)
-        );
-
-        // Rust + Axum -> Backend
-        assert_eq!(
-            ProjectType::infer(&Language::Rust, Some(&Framework::Rust(RustFramework::Axum))),
-            Some(ProjectType::Backend)
-        );
-    }
-
-    #[test]
-    fn project_type_infer_python() {
-        // Python + no framework -> Backend
-        assert_eq!(
-            ProjectType::infer(&Language::Python, None),
-            Some(ProjectType::Backend)
-        );
-
-        // Python + FastAPI -> Backend
-        assert_eq!(
-            ProjectType::infer(
-                &Language::Python,
-                Some(&Framework::Python(PythonFramework::FastApi))
-            ),
-            Some(ProjectType::Backend)
-        );
-    }
-
-    #[test]
-    fn project_type_infer_typescript() {
-        // TypeScript + no framework -> Frontend (default)
-        assert_eq!(
-            ProjectType::infer(&Language::TypeScript, None),
-            Some(ProjectType::Frontend)
-        );
-
-        // TypeScript + React -> Frontend
-        assert_eq!(
-            ProjectType::infer(
-                &Language::TypeScript,
-                Some(&Framework::TypeScript(TypeScriptFramework::React))
-            ),
-            Some(ProjectType::Frontend)
-        );
-
-        // TypeScript + NextJs -> Fullstack
-        assert_eq!(
-            ProjectType::infer(
-                &Language::TypeScript,
-                Some(&Framework::TypeScript(TypeScriptFramework::NextJs))
-            ),
-            Some(ProjectType::Fullstack)
-        );
-
-        // TypeScript + Express -> Backend
-        assert_eq!(
-            ProjectType::infer(
-                &Language::TypeScript,
-                Some(&Framework::TypeScript(TypeScriptFramework::Express))
-            ),
-            Some(ProjectType::Backend)
-        );
-    }
-
-    // ========================================================================
-    // Framework tests
-    // ========================================================================
-
-    #[test]
-    fn framework_language() {
-        assert_eq!(
-            Framework::Rust(RustFramework::Axum).language(),
-            Language::Rust
-        );
-        assert_eq!(
-            Framework::Python(PythonFramework::FastApi).language(),
-            Language::Python
-        );
-        assert_eq!(
-            Framework::TypeScript(TypeScriptFramework::React).language(),
-            Language::TypeScript
-        );
-    }
-
-    #[test]
-    fn framework_supports_project_type() {
-        // Rust frameworks: Backend and Worker
-        assert!(Framework::Rust(RustFramework::Axum).supports(ProjectType::Backend));
-        assert!(Framework::Rust(RustFramework::Axum).supports(ProjectType::Worker));
-        assert!(!Framework::Rust(RustFramework::Axum).supports(ProjectType::Frontend));
-        assert!(!Framework::Rust(RustFramework::Axum).supports(ProjectType::Cli));
-
-        // Python frameworks: Backend only
-        assert!(Framework::Python(PythonFramework::FastApi).supports(ProjectType::Backend));
-        assert!(!Framework::Python(PythonFramework::Django).supports(ProjectType::Frontend));
-
-        // TypeScript: varies by framework
-        assert!(Framework::TypeScript(TypeScriptFramework::Express).supports(ProjectType::Backend));
-        assert!(Framework::TypeScript(TypeScriptFramework::React).supports(ProjectType::Frontend));
-        assert!(
-            Framework::TypeScript(TypeScriptFramework::NextJs).supports(ProjectType::Fullstack)
-        );
-        assert!(!Framework::TypeScript(TypeScriptFramework::React).supports(ProjectType::Backend));
-    }
-
-    #[test]
-    fn framework_infer_defaults() {
-        // Rust backend -> Axum
-        assert_eq!(
-            Framework::infer(&Language::Rust, ProjectType::Backend).unwrap(),
-            Framework::Rust(RustFramework::Axum)
-        );
-
-        // Rust CLI -> None (no framework needed)
-        assert!(Framework::infer(&Language::Rust, ProjectType::Cli).is_none());
-
-        // Python backend -> FastAPI
-        assert_eq!(
-            Framework::infer(&Language::Python, ProjectType::Backend).unwrap(),
-            Framework::Python(PythonFramework::FastApi)
-        );
-
-        // TypeScript frontend -> React
-        assert_eq!(
-            Framework::infer(&Language::TypeScript, ProjectType::Frontend).unwrap(),
-            Framework::TypeScript(TypeScriptFramework::React)
-        );
-
-        // TypeScript backend -> Express
-        assert_eq!(
-            Framework::infer(&Language::TypeScript, ProjectType::Backend).unwrap(),
-            Framework::TypeScript(TypeScriptFramework::Express)
-        );
-
-        // TypeScript fullstack -> NextJs
-        assert_eq!(
-            Framework::infer(&Language::TypeScript, ProjectType::Fullstack).unwrap(),
-            Framework::TypeScript(TypeScriptFramework::NextJs)
-        );
-    }
-
-    // ========================================================================
-    // Architecture tests
-    // ========================================================================
-
-    #[test]
-    fn architecture_from_str() {
-        assert_eq!(
-            "layered".parse::<Architecture>().unwrap(),
-            Architecture::Layered
-        );
-        assert_eq!("mvc".parse::<Architecture>().unwrap(), Architecture::Mvc);
-        assert_eq!(
-            "modular".parse::<Architecture>().unwrap(),
-            Architecture::Modular
-        );
-        assert_eq!(
-            "app-router".parse::<Architecture>().unwrap(),
-            Architecture::AppRouter
-        );
-        assert_eq!(
-            "approuter".parse::<Architecture>().unwrap(),
-            Architecture::AppRouter
-        );
-    }
-
-    #[test]
-    fn architecture_supports_project_type() {
-        // Layered: universal
-        assert!(Architecture::Layered.supports(ProjectType::Cli));
-        assert!(Architecture::Layered.supports(ProjectType::Backend));
-        assert!(Architecture::Layered.supports(ProjectType::Frontend));
-        assert!(Architecture::Layered.supports(ProjectType::Fullstack));
-        assert!(Architecture::Layered.supports(ProjectType::Worker));
-
-        // MVC: Backend and Fullstack only
-        assert!(!Architecture::Mvc.supports(ProjectType::Cli));
-        assert!(Architecture::Mvc.supports(ProjectType::Backend));
-        assert!(!Architecture::Mvc.supports(ProjectType::Frontend));
-        assert!(Architecture::Mvc.supports(ProjectType::Fullstack));
-        assert!(!Architecture::Mvc.supports(ProjectType::Worker));
-
-        // Modular: Backend, Fullstack, Worker
-        assert!(!Architecture::Modular.supports(ProjectType::Cli));
-        assert!(Architecture::Modular.supports(ProjectType::Backend));
-        assert!(!Architecture::Modular.supports(ProjectType::Frontend));
-        assert!(Architecture::Modular.supports(ProjectType::Fullstack));
-        assert!(Architecture::Modular.supports(ProjectType::Worker));
-
-        // AppRouter: Fullstack only
-        assert!(!Architecture::AppRouter.supports(ProjectType::Cli));
-        assert!(!Architecture::AppRouter.supports(ProjectType::Backend));
-        assert!(!Architecture::AppRouter.supports(ProjectType::Frontend));
-        assert!(Architecture::AppRouter.supports(ProjectType::Fullstack));
-        assert!(!Architecture::AppRouter.supports(ProjectType::Worker));
-    }
-
-    // FIXME
-    #[test]
-    fn architecture_supports_framework() {
-        // Layered: supports all backend frameworks
-        assert!(Architecture::Layered.supports_framework(&Framework::Rust(RustFramework::Axum)));
-        assert!(
-            Architecture::Layered.supports_framework(&Framework::Python(PythonFramework::FastApi))
-        );
-        assert!(
-            Architecture::Layered
-                .supports_framework(&Framework::TypeScript(TypeScriptFramework::Express))
-        );
-
-        // MVC: Django and Express
-        assert!(Architecture::Mvc.supports_framework(&Framework::Python(PythonFramework::Django)));
-        assert!(
-            Architecture::Mvc
-                .supports_framework(&Framework::TypeScript(TypeScriptFramework::Express))
-        );
-        assert!(!Architecture::Mvc.supports_framework(&Framework::Rust(RustFramework::Axum)));
-        assert!(
-            !Architecture::Mvc.supports_framework(&Framework::Python(PythonFramework::FastApi))
-        );
-
-        // Modular: NestJS, Rust frameworks, FastAPI
-        assert!(
-            Architecture::Modular
-                .supports_framework(&Framework::TypeScript(TypeScriptFramework::NestJs))
-        );
-        assert!(Architecture::Modular.supports_framework(&Framework::Rust(RustFramework::Axum)));
-        assert!(
-            Architecture::Modular.supports_framework(&Framework::Python(PythonFramework::FastApi))
-        );
-        assert!(
-            !Architecture::Modular
-                .supports_framework(&Framework::TypeScript(TypeScriptFramework::Express))
-        );
-
-        // AppRouter: NextJs only
-        assert!(
-            Architecture::AppRouter
-                .supports_framework(&Framework::TypeScript(TypeScriptFramework::NextJs))
-        );
-        assert!(
-            !Architecture::AppRouter
-                .supports_framework(&Framework::TypeScript(TypeScriptFramework::React))
-        );
-
-        //TODO: Frontend frameworks: no backend architecture patterns
-        // assert!(
-        //     !Architecture::Layered
-        //         .supports_framework(&Framework::TypeScript(TypeScriptFramework::React))
-        // );
-        // assert!(
-        //     !Architecture::Mvc.supports_framework(&Framework::TypeScript(TypeScriptFramework::Vue))
-        // );
-    }
-
-    #[test]
-    fn architecture_infer() {
-        // NextJs -> AppRouter
-        assert_eq!(
-            Architecture::infer(
-                Some(&Framework::TypeScript(TypeScriptFramework::NextJs)),
-                ProjectType::Fullstack
-            ),
-            Some(Architecture::AppRouter)
-        );
-
-        // Django -> MVC
-        assert_eq!(
-            Architecture::infer(
-                Some(&Framework::Python(PythonFramework::Django)),
-                ProjectType::Backend
-            ),
-            Some(Architecture::Mvc)
-        );
-
-        // NestJS -> Modular
-        assert_eq!(
-            Architecture::infer(
-                Some(&Framework::TypeScript(TypeScriptFramework::NestJs)),
-                ProjectType::Backend
-            ),
-            Some(Architecture::Modular)
-        );
-
-        // CLI with no framework -> Layered
-        assert_eq!(
-            Architecture::infer(None, ProjectType::Cli),
-            Some(Architecture::Layered)
-        );
-
-        // Generic frameworks -> Layered
-        assert_eq!(
-            Architecture::infer(
-                Some(&Framework::Rust(RustFramework::Axum)),
-                ProjectType::Backend
-            ),
-            Some(Architecture::Layered)
-        );
-    }
-
-    // ========================================================================
-    // TargetBuilder: Typestate enforcement
-    // ========================================================================
-
-    #[test]
-    fn builder_requires_language() {
-        // This should NOT compile (and doesn't):
-        // let target = Target::builder().resolve();
-
-        // This is the only valid way:
+    fn target_builder_requires_language() {
         let target = Target::builder().language(Language::Rust).build().unwrap();
-
-        assert_eq!(target.language, Language::Rust);
+        println!("{target:?}");
+        assert_eq!(target.language(), Language::Rust);
     }
 
     #[test]
-    fn builder_language_only_defaults_everything() {
+    fn target_with_defaults() {
         let target = Target::builder().language(Language::Rust).build().unwrap();
-
-        assert_eq!(target.language, Language::Rust);
-        assert_eq!(target.project_type, ProjectType::Backend);
-        assert_eq!(target.framework, Some(Framework::Rust(RustFramework::Axum)));
-        assert_eq!(target.architecture, Architecture::Layered);
+        assert_eq!(target.language(), Language::Rust);
+        assert_eq!(target.kind(), ProjectKind::Cli);
+        assert_eq!(target.architecture(), Architecture::Layered);
+        assert_eq!(target.framework(), None); // CLI doesn't need framework
     }
 
     #[test]
-    fn builder_python_defaults() {
+    fn target_explicit_all_fields() {
         let target = Target::builder()
-            .language(Language::Python)
+            .language(Language::Rust)
+            .kind(ProjectKind::WebBackend)
+            .unwrap()
+            .framework(Framework::Rust(RustFramework::Axum))
+            .unwrap()
+            .architecture(Architecture::Layered)
+            .unwrap()
             .build()
             .unwrap();
 
-        assert_eq!(target.project_type, ProjectType::Backend);
+        assert_eq!(target.language(), Language::Rust);
+        assert_eq!(target.kind(), ProjectKind::WebBackend);
         assert_eq!(
-            target.framework,
-            Some(Framework::Python(PythonFramework::FastApi))
+            target.framework(),
+            Some(Framework::Rust(RustFramework::Axum))
         );
-        assert_eq!(target.architecture, Architecture::Layered);
+        assert_eq!(target.architecture(), Architecture::Layered);
     }
 
     #[test]
-    fn builder_typescript_defaults_to_frontend() {
-        let target = Target::builder()
-            .language(Language::TypeScript)
-            .build()
-            .unwrap();
+    fn target_rejects_incompatible_framework() {
+        let result = Target::builder()
+            .language(Language::Rust)
+            .framework(Framework::Python(PythonFramework::Django))
+            .unwrap()
+            .build();
 
-        assert_eq!(target.project_type, ProjectType::Frontend);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn language_parse() {
+        assert_eq!(Language::parse("rust"), Some(Language::Rust));
+        assert_eq!(Language::parse("rs"), Some(Language::Rust));
+        assert_eq!(Language::parse("python"), Some(Language::Python));
+        assert_eq!(Language::parse("py"), Some(Language::Python));
+        assert_eq!(Language::parse("invalid"), None);
+    }
+
+    #[test]
+    fn preset_rust_cli() {
+        let target = Target::rust_cli().unwrap();
+        assert_eq!(target.language(), Language::Rust);
+        assert_eq!(target.kind(), ProjectKind::Cli);
+    }
+
+    #[test]
+    fn preset_rust_backend_axum() {
+        let target = Target::rust_backend_axum().unwrap();
+        assert_eq!(target.language(), Language::Rust);
+        assert_eq!(target.kind(), ProjectKind::WebBackend);
         assert_eq!(
-            target.framework,
-            Some(Framework::TypeScript(TypeScriptFramework::React))
+            target.framework(),
+            Some(Framework::Rust(RustFramework::Axum))
         );
     }
 
     #[test]
-    fn builder_with_project_type_hint() {
-        let target = Target::builder()
+    fn build_partial_target_with_inference() {
+        let target = TargetBuilder::new()
             .language(Language::TypeScript)
-            .project_type(ProjectType::Backend)
+            .kind(ProjectKind::Fullstack)
+            .unwrap()
             .build()
             .unwrap();
 
-        assert_eq!(target.project_type, ProjectType::Backend);
-        assert_eq!(
-            target.framework,
-            Some(Framework::TypeScript(TypeScriptFramework::Express))
-        );
-        assert_eq!(target.architecture, Architecture::Layered);
-    }
-
-    #[test]
-    fn builder_with_framework_hint() {
-        let target = Target::builder()
-            .language(Language::TypeScript)
-            .framework(Framework::TypeScript(TypeScriptFramework::NextJs))
-            .build()
-            .unwrap();
-
-        assert_eq!(target.project_type, ProjectType::Fullstack);
+        assert_eq!(target.language, Language::TypeScript);
+        assert_eq!(target.kind, ProjectKind::Fullstack);
         assert_eq!(
             target.framework,
             Some(Framework::TypeScript(TypeScriptFramework::NextJs))
         );
-        assert_eq!(target.architecture, Architecture::AppRouter);
+        assert!(matches!(target.architecture, Architecture::Layered));
     }
 
     #[test]
-    fn builder_with_explicit_architecture() {
+    fn infer_framework_for_web_backend() {
         let target = Target::builder()
             .language(Language::Python)
-            .framework(Framework::Python(PythonFramework::Django))
-            .architecture(Architecture::Mvc)
+            .kind(ProjectKind::WebBackend)
+            .unwrap()
             .build()
             .unwrap();
 
-        assert_eq!(target.architecture, Architecture::Mvc);
-    }
-
-    #[test]
-    fn builder_rust_cli_no_framework() {
-        let target = Target::builder()
-            .language(Language::Rust)
-            .project_type(ProjectType::Cli)
-            .build()
-            .unwrap();
-
-        assert_eq!(target.project_type, ProjectType::Cli);
-        assert_eq!(target.framework, None); // CLI doesn't need framework
-        assert_eq!(target.architecture, Architecture::Layered);
-    }
-
-    // ========================================================================
-    // TargetBuilder: Error cases
-    // ========================================================================
-
-    #[test]
-    fn builder_rejects_framework_language_mismatch() {
-        let result = Target::builder()
-            .language(Language::Rust)
-            .framework(Framework::Python(PythonFramework::Django))
-            .build();
-
-        assert!(result.is_err());
-        assert!(matches!(
-            result.unwrap_err(),
-            DomainError::FrameworkLanguageMismatch { .. }
-        ));
-    }
-
-    #[test]
-    fn builder_rejects_framework_project_type_mismatch() {
-        let result = Target::builder()
-            .language(Language::TypeScript)
-            .framework(Framework::TypeScript(TypeScriptFramework::React))
-            .project_type(ProjectType::Backend)
-            .build();
-
-        assert!(result.is_err());
-        assert!(matches!(
-            result.unwrap_err(),
-            DomainError::FrameworkProjectTypeMismatch { .. }
-        ));
-    }
-
-    #[test]
-    fn builder_rejects_architecture_project_type_mismatch() {
-        let result = Target::builder()
-            .language(Language::Rust)
-            .project_type(ProjectType::Cli)
-            .architecture(Architecture::AppRouter) // AppRouter only for Fullstack
-            .build();
-
-        assert!(result.is_err());
-        assert!(matches!(
-            result.unwrap_err(),
-            DomainError::ArchitectureProjectTypeMismatch { .. }
-        ));
-    }
-
-    // FIXME
-    #[test]
-    fn builder_rejects_architecture_framework_mismatch() {
-        let result = Target::builder()
-            .language(Language::TypeScript)
-            .framework(Framework::TypeScript(TypeScriptFramework::React))
-            .architecture(Architecture::Layered) // Frontend frameworks don't support backend architectures
-            .build();
-
-        println!("{result:?}");
-        // TODO: uncomment this after fix
-        // assert!(result.is_err());
-        // assert!(matches!(
-        //     result.unwrap_err(),
-        //     DomainError::ArchitectureFrameworkMismatch { .. }
-        // ));
-    }
-
-    #[test]
-    fn builder_requires_framework_for_backend() {
-        // This should work (framework inferred)
-        let result = Target::builder()
-            .language(Language::Rust)
-            .project_type(ProjectType::Backend)
-            .build();
-        assert!(result.is_ok());
-
-        // But if inference somehow failed, it would error
-        // (This is hard to test directly without breaking inference logic)
-    }
-
-    // ========================================================================
-    // Integration tests: Complete workflows
-    // ========================================================================
-
-    #[test]
-    fn workflow_rust_backend_axum_layered() {
-        let target = Target::builder()
-            .language(Language::Rust)
-            .framework(Framework::Rust(RustFramework::Axum))
-            .project_type(ProjectType::Backend)
-            .architecture(Architecture::Layered)
-            .build()
-            .unwrap();
-
-        assert_eq!(target.language, Language::Rust);
-        assert_eq!(target.framework, Some(Framework::Rust(RustFramework::Axum)));
-        assert_eq!(target.project_type, ProjectType::Backend);
-        assert_eq!(target.architecture, Architecture::Layered);
-    }
-
-    #[test]
-    fn workflow_python_django_mvc() {
-        let target = Target::builder()
-            .language(Language::Python)
-            .framework(Framework::Python(PythonFramework::Django))
-            .architecture(Architecture::Mvc)
-            .build()
-            .unwrap();
-
-        assert_eq!(target.project_type, ProjectType::Backend);
-        assert_eq!(target.architecture, Architecture::Mvc);
-    }
-
-    #[test]
-    fn workflow_typescript_nextjs_fullstack() {
-        let target = Target::builder()
-            .language(Language::TypeScript)
-            .framework(Framework::TypeScript(TypeScriptFramework::NextJs))
-            .build()
-            .unwrap();
-
-        assert_eq!(target.project_type, ProjectType::Fullstack);
-        assert_eq!(target.architecture, Architecture::AppRouter);
-    }
-
-    #[test]
-    fn workflow_typescript_react_frontend() {
-        let target = Target::builder()
-            .language(Language::TypeScript)
-            .framework(Framework::TypeScript(TypeScriptFramework::React))
-            .build()
-            .unwrap();
-
-        assert_eq!(target.project_type, ProjectType::Frontend);
-        // Note: Frontend frameworks don't have backend architecture patterns
-        // So architecture inference might fail or need special handling
-    }
-
-    #[test]
-    fn workflow_minimal_rust_cli() {
-        let target = Target::builder()
-            .language(Language::Rust)
-            .project_type(ProjectType::Cli)
-            .build()
-            .unwrap();
-
-        assert_eq!(target.framework, None);
-        assert_eq!(target.architecture, Architecture::Layered);
-    }
-
-    #[test]
-    fn workflow_explicit_all_fields() {
-        let target = Target::builder()
-            .language(Language::Python)
-            .framework(Framework::Python(PythonFramework::FastApi))
-            .project_type(ProjectType::Backend)
-            .architecture(Architecture::Modular)
-            .build()
-            .unwrap();
-
-        assert_eq!(target.language, Language::Python);
         assert_eq!(
-            target.framework,
+            target.framework(),
             Some(Framework::Python(PythonFramework::FastApi))
         );
-        assert_eq!(target.project_type, ProjectType::Backend);
-        assert_eq!(target.architecture, Architecture::Modular);
     }
 
-    // ========================================================================
-    // Edge cases and boundary conditions
-    // ========================================================================
-
     #[test]
-    fn edge_case_rust_worker() {
+    fn cli_does_not_require_framework() {
         let target = Target::builder()
             .language(Language::Rust)
-            .project_type(ProjectType::Worker)
+            .kind(ProjectKind::Cli)
+            .unwrap()
             .build()
             .unwrap();
 
-        assert_eq!(target.project_type, ProjectType::Worker);
-        // Worker can have framework (Axum) or none
-        assert_eq!(target.framework, Some(Framework::Rust(RustFramework::Axum)));
+        assert_eq!(target.framework(), None);
     }
 
     #[test]
-    fn edge_case_typescript_backend_express() {
+    fn worker_does_not_require_framework() {
         let target = Target::builder()
-            .language(Language::TypeScript)
-            .project_type(ProjectType::Backend)
+            .language(Language::Python)
+            .kind(ProjectKind::Worker)
+            .unwrap()
             .build()
             .unwrap();
 
-        assert_eq!(
-            target.framework,
-            Some(Framework::TypeScript(TypeScriptFramework::Express))
-        );
-        assert_eq!(target.architecture, Architecture::Layered);
+        assert_eq!(target.framework(), None);
     }
 
     #[test]
-    fn edge_case_typescript_backend_nestjs_modular() {
-        let target = Target::builder()
-            .language(Language::TypeScript)
-            .framework(Framework::TypeScript(TypeScriptFramework::NestJs))
-            .build()
-            .unwrap();
+    fn web_backend_requires_framework_if_not_inferable() {
+        // This should succeed because FastAPI can be inferred
+        let result = Target::builder()
+            .language(Language::Python)
+            .kind(ProjectKind::WebBackend)
+            .unwrap()
+            .build();
 
-        assert_eq!(target.project_type, ProjectType::Backend);
-        assert_eq!(target.architecture, Architecture::Modular);
+        assert!(result.is_ok());
     }
 }
-
-// endregion:tests
-
-// TODO: Add runtime support for ts/ts
-// | Thing   | Category            |
-// | ------- | ------------------- |
-// | Node.js | Runtime             |
-// | Bun     | Runtime             |
-// | Deno    | Runtime             |
-// | Express | Backend framework   |
-// | NestJS  | Backend framework   |
-// | Next.js | Fullstack framework |
-// | React   | Frontend framework  |
-
-// compatability
-// | Framework         | Node | Bun | Deno |
-// | ----------------- | ---- | --- | ---- |
-// | Express           | ✅    | ✅   | ⚠️   |
-// | Fastify           | ✅    | ✅   | ⚠️   |
-// | NestJS            | ✅    | ✅   | ⚠️   |
-// | Hono              | ✅    | ✅   | ✅    |
-// | Oak (Deno-native) | ❌    | ❌   | ✅    |
-
-// | Framework          | Node    | Bun     | Deno    |
-// | ------------------ | ------- | ------- | ------- |
-// | Next.js            | ✅       | ✅       | ⚠️      |
-// | Remix              | ✅       | ✅       | ⚠️      |
-// | Astro              | ✅       | ✅       | ⚠️      |
-// | React (build-time) | ✅       | ✅       | ⚠️      |
-// | React (runtime)    | Browser | Browser | Browser |

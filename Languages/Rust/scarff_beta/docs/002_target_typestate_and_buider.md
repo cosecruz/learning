@@ -9,7 +9,7 @@ Let’s walk this **conceptually first**, then I’ll show a clean shape you can
 You want:
 
 - `language` → **mandatory**
-- `framework`, `project_type`, `architecture` → **optional inputs**
+- `framework`, `kind`, `architecture` → **optional inputs**
 - `Target` → **always valid**
 - Inference happens automatically
 - Invalid combinations are impossible (or rejected early)
@@ -31,7 +31,7 @@ Right now you likely have something like:
 Target::new(
     language,
     framework: Option<_>,
-    project_type: Option<_>,
+    kind: Option<_>,
     architecture: Option<_>,
 )
 ```
@@ -92,7 +92,7 @@ These are just **compile-time flags**.
 pub struct TargetBuilder<L, R> {
     language: Option<Language>,
     framework: Option<Framework>,
-    project_type: Option<ProjectType>,
+    kind: Option<ProjectKind>,
     architecture: Option<Architecture>,
     _language: std::marker::PhantomData<L>,
     _resolved: std::marker::PhantomData<R>,
@@ -111,7 +111,7 @@ impl TargetBuilder<NoLanguage, Unresolved> {
         Self {
             language: None,
             framework: None,
-            project_type: None,
+            kind: None,
             architecture: None,
             _language: PhantomData,
             _resolved: PhantomData,
@@ -130,7 +130,7 @@ impl TargetBuilder<NoLanguage, Unresolved> {
         TargetBuilder {
             language: Some(lang),
             framework: self.framework,
-            project_type: self.project_type,
+            kind: self.kind,
             architecture: self.architecture,
             _language: PhantomData,
             _resolved: PhantomData,
@@ -155,8 +155,8 @@ impl TargetBuilder<HasLanguage, Unresolved> {
         self
     }
 
-    pub fn project_type(mut self, pt: ProjectType) -> Self {
-        self.project_type = Some(pt);
+    pub fn kind(mut self, pt: ProjectKind) -> Self {
+        self.kind = Some(pt);
         self
     }
 
@@ -178,11 +178,11 @@ impl TargetBuilder<HasLanguage, Unresolved> {
     pub fn resolve(self) -> Result<Target, TargetError> {
         let language = self.language.unwrap();
 
-        let project_type =
-            infer_project_type(language, self.framework, self.project_type)?;
+        let kind =
+            infer_kind(language, self.framework, self.kind)?;
 
         let framework =
-            infer_framework(language, project_type, self.framework)?;
+            infer_framework(language, kind, self.framework)?;
 
         let architecture =
             infer_architecture(language, self.architecture);
@@ -190,7 +190,7 @@ impl TargetBuilder<HasLanguage, Unresolved> {
         Ok(Target {
             language,
             framework,
-            project_type,
+            kind,
             architecture,
         })
     }
@@ -213,7 +213,7 @@ No `Option` survives past this point.
 pub struct Target {
     pub language: Language,
     pub framework: Framework,
-    pub project_type: ProjectType,
+    pub kind: ProjectKind,
     pub architecture: Architecture,
 }
 ```
@@ -239,7 +239,7 @@ let target = TargetBuilder::new()
 ```rust
 let target = TargetBuilder::new()
     .language(Language::TypeScript)
-    .project_type(ProjectType::Frontend)
+    .kind(ProjectKind::Frontend)
     .resolve()?;
 ```
 
@@ -249,7 +249,7 @@ let target = TargetBuilder::new()
 let target = TargetBuilder::new()
     .language(Language::Rust)
     .framework(Framework::Axum)
-    .project_type(ProjectType::Backend)
+    .kind(ProjectKind::Backend)
     .architecture(Architecture::X86_64)
     .resolve()?;
 ```

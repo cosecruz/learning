@@ -25,7 +25,7 @@
 //! The main entry point is the [`Engine`] struct:
 //!
 //! ```rust,no_run
-//! use scarff_core::{Engine, Target, Language, ProjectType, Architecture};
+//! use scarff_core::{Engine, Target, Language, ProjectKind, Architecture};
 //!
 //! // Create an engine
 //! let engine = Engine::new();
@@ -33,7 +33,7 @@
 //! // Define what you want to scaffold
 //! let target = Target::builder()
 //!     .language(Language::Rust)
-//!     .project_type(ProjectType::Cli)
+//!     .kind(ProjectKind::Cli)
 //!     .architecture(Architecture::Layered)
 //!     .build()?;
 //!
@@ -66,7 +66,7 @@
 //!
 //! The crate is organized into several modules:
 //!
-//! - **Domain** (`domain`): Core types like [`Target`], [`Language`], [`ProjectType`]
+//! - **Domain** (`domain`): Core types like [`Target`], [`Language`], [`ProjectKind`]
 //! - **Template** (`template`): Template resolution and rendering (internal)
 //! - **Scaffold** (`scaffold`): Orchestration and filesystem operations (internal)
 //!
@@ -135,7 +135,7 @@ pub use domain::{
     HasLanguage,
     Language,
     NoLanguage,
-    ProjectType,
+    ProjectKind,
     PythonFramework,
     RustFramework,
     Target,
@@ -167,14 +167,14 @@ pub use scaffold::{Engine, ScaffoldError, TemplateInfo};
 ///
 /// let target = Target::builder()
 ///     .language(Language::Rust)
-///     .project_type(ProjectType::Cli)
+///     .kind(ProjectKind::Cli)
 ///     .build()?;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub mod prelude {
     pub use crate::{
         Architecture, CoreError, CoreResult, DomainError, Engine, Framework, HasLanguage, Language,
-        NoLanguage, ProjectType, PythonFramework, RustFramework, ScaffoldError, Target,
+        NoLanguage, ProjectKind, PythonFramework, RustFramework, ScaffoldError, Target,
         TargetBuilder, TemplateInfo, TypeScriptFramework,
     };
 }
@@ -222,7 +222,7 @@ mod tests {
         // Should be able to use all common types
         let _target: Target;
         let _lang: Language = Language::Rust;
-        let _project_type: ProjectType = ProjectType::Cli;
+        let _kind: ProjectKind = ProjectKind::Cli;
         let _arch: Architecture = Architecture::Layered;
     }
 
@@ -233,8 +233,10 @@ mod tests {
 
         let target = Target::builder()
             .language(Language::Rust)
-            .project_type(ProjectType::Cli)
+            .kind(ProjectKind::Cli)
+            .unwrap()
             .architecture(Architecture::Layered)
+            .unwrap()
             .build()
             .expect("Should build valid target");
 

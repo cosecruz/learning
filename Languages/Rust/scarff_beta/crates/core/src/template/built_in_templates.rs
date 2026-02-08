@@ -13,7 +13,7 @@
 //         matcher:{
 //             language: $lang:ident,
 //             framework: $fw:expr,
-//             project_type: $ptype:ident,
+//             kind: $ptype:ident,
 //             architecture: $arch:ident $(,)?
 //         },
 //         tree: $tree:expr $(,)?
@@ -24,7 +24,7 @@
 //             matcher: TargetMatcher {
 //                 language: Language::$lang,
 //                 framework: $fw,
-//                 project_type: ProjectType::$ptype,
+//                 kind: ProjectKind::$ptype,
 //                 architecture: Architecture::$arch,
 //             },
 //             tree: $tree,
@@ -33,7 +33,7 @@
 // }
 
 use crate::domain::{
-    Architecture, DirectorySpec, FileSpec, Language, ProjectType, TargetMatcher, Template,
+    Architecture, DirectorySpec, FileSpec, Language, ProjectKind, TargetMatcher, Template,
     TemplateContent, TemplateId, TemplateMetadata, TemplateNode, TemplateTree,
 };
 
@@ -79,7 +79,7 @@ macro_rules! template {
         matcher {
             language: $lang:ident,
             framework: $fw:expr,
-            project_type: $ptype:ident,
+            kind: $ptype:ident,
             architecture: $arch:ident $(,)?
         }
 
@@ -93,7 +93,7 @@ macro_rules! template {
             matcher: TargetMatcher {
                 language: Language::$lang,
                 framework: $fw,
-                project_type: ProjectType::$ptype,
+                kind: ProjectKind::$ptype,
                 architecture: Architecture::$arch,
             },
             tree: template_tree! {
@@ -113,7 +113,7 @@ pub fn rust_cli_default() -> Template {
     //     matcher: TargetMatcher {
     //         language: Language::Rust,
     //         framework: None,
-    //         project_type: ProjectType::Cli,
+    //         kind: ProjectKind::Cli,
     //         architecture: Architecture::Layered,
     //     },
     //     tree: TemplateTree::new()
@@ -139,7 +139,7 @@ pub fn rust_cli_default() -> Template {
     //     matcher: {
     //         language: Rust,
     //         framework: None,
-    //         project_type: Cli,
+    //         kind: Cli,
     //         architecture: Layered,
     //     },
     //     tree: TemplateTree::new()
@@ -154,7 +154,7 @@ pub fn rust_cli_default() -> Template {
         matcher {
             language: Rust,
             framework: None,
-            project_type: Cli,
+            kind: Cli,
             architecture: Layered,
         }
 
@@ -179,7 +179,7 @@ pub fn rust_cli_default() -> Template {
 //         matcher: TargetMatcher {
 //             language: Language::Rust,
 //             framework: None,
-//             project_type: ProjectType::Cli,
+//             kind: ProjectKind::Cli,
 //             architecture: Architecture::Layered,
 //         },
 //         tree: TemplateTree::new()
@@ -261,7 +261,7 @@ pub fn rust_cli_default() -> Template {
 //         matcher: TargetMatcher {
 //             language: Language::Rust,
 //             framework: None,
-//             project_type: ProjectType::Library,
+//             kind: ProjectKind::Library,
 //             architecture: Architecture::Layered,
 //         },
 //         tree: TemplateTree::new()
@@ -292,7 +292,7 @@ pub fn rust_cli_default() -> Template {
 //         matcher: TargetMatcher {
 //             language: Language::Rust,
 //             framework: Some("axum".to_string()),
-//             project_type: ProjectType::WebApi,
+//             kind: ProjectKind::WebApi,
 //             architecture: Architecture::Clean,
 //         },
 //         tree: TemplateTree::new()

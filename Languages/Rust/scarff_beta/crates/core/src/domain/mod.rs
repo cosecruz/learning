@@ -12,7 +12,7 @@ mod errors;
 mod project_structure;
 mod render_context;
 mod target;
-mod target_v2;
+// mod target_old;
 mod template;
 
 // Re-export common types for convenience
@@ -27,7 +27,7 @@ pub(crate) use project_structure::{
 };
 pub(crate) use render_context::RenderContext;
 pub use target::{
-    Architecture, Framework, HasLanguage, Language, NoLanguage, ProjectType, PythonFramework,
+    Architecture, Framework, HasLanguage, Language, NoLanguage, ProjectKind, PythonFramework,
     RustFramework, Target, TargetBuilder, TypeScriptFramework,
 };
 pub(crate) use template::{

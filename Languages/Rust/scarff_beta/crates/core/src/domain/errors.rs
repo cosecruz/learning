@@ -13,22 +13,19 @@ pub enum DomainError {
     UnsupportedLanguage { language: String },
 
     // ========================================================================
-    // ProjectType errors
+    // ProjectKind errors
     // ========================================================================
     /// Unsupported project type
     #[error(
-        "Unsupported project type '{project_type}'. Supported: cli, backend, frontend, fullstack, worker"
+        "Unsupported project type '{kind}'. Supported: cli, backend, frontend, fullstack, worker"
     )]
-    UnsupportedProjectType { project_type: String },
+    UnsupportedProjectKind { kind: String },
 
     /// Project type  is incompatible with the specified language
     #[error(
-        "Language '{language}' is not best used for type '{project_type}'. This project type is better implemented with a different language ecosystem"
+        "Language '{language}' is not best used for type '{kind}'. This project type is better implemented with a different language ecosystem"
     )]
-    ProjectTypeLanguageMismatch {
-        project_type: String,
-        language: String,
-    },
+    ProjectKindLanguageMismatch { kind: String, language: String },
 
     // ========================================================================
     // Framework errors
@@ -41,18 +38,15 @@ pub enum DomainError {
 
     /// Framework doesn't support the project type
     #[error(
-        "Framework '{framework}' does not support project type '{project_type}'. Choose a compatible framework or different project type"
+        "Framework '{framework}' does not support project type '{kind}'. Choose a compatible framework or different project type"
     )]
-    FrameworkProjectTypeMismatch {
-        framework: String,
-        project_type: String,
-    },
+    FrameworkProjectKindMismatch { framework: String, kind: String },
 
     /// Framework is required for this project type but was not provided
     #[error(
-        "A framework is required for project type '{project_type}'. Specify a framework using --framework or choose a different project type"
+        "A framework is required for project type '{kind}'. Specify a framework using --framework or choose a different project type"
     )]
-    FrameworkRequired { project_type: String },
+    FrameworkRequired { kind: String },
 
     // ========================================================================
     // Architecture errors
@@ -65,12 +59,9 @@ pub enum DomainError {
 
     /// Architecture is incompatible with the project type
     #[error(
-        "Architecture '{architecture}' is not compatible with project type '{project_type}'. Choose a compatible architecture or different project type"
+        "Architecture '{architecture}' is not compatible with project type '{kind}'. Choose a compatible architecture or different project type"
     )]
-    ArchitectureProjectTypeMismatch {
-        architecture: String,
-        project_type: String,
-    },
+    ArchitectureProjectKindMismatch { architecture: String, kind: String },
 
     /// Architecture is incompatible with the framework
     #[error(

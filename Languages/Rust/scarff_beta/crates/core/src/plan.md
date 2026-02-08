@@ -1,6 +1,6 @@
 Target{
 Language
-ProjectType
+ProjectKind
 Framework
 Architecture
 //TODO: Post-MVP others like flavour, technologies, features and addons

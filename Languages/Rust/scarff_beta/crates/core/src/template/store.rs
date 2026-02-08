@@ -179,7 +179,7 @@ fn validate_template(template: &Template) -> CoreResult<()> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        Architecture, Language, ProjectType,
+        Architecture, Language, ProjectKind,
         domain::{Framework, RustFramework, TargetMatcher, TemplateMetadata, TemplateTree},
         template::built_in_templates,
     };
@@ -189,8 +189,10 @@ mod tests {
     fn rust_cli_layered_target() -> Target {
         Target::builder()
             .language(Language::Rust)
-            .project_type(ProjectType::Cli)
+            .kind(ProjectKind::Cli)
+            .unwrap()
             .architecture(Architecture::Layered)
+            .unwrap()
             .build()
             .unwrap()
     }
@@ -221,8 +223,10 @@ mod tests {
 
         let target = Target::builder()
             .language(Language::Rust)
-            .project_type(ProjectType::Cli)
+            .kind(ProjectKind::Cli)
+            .unwrap()
             .architecture(Architecture::Layered)
+            .unwrap()
             .build()
             .unwrap();
 
@@ -249,7 +253,7 @@ mod tests {
             matcher: TargetMatcher {
                 language: Language::Rust,
                 framework: None,
-                project_type: ProjectType::Cli,
+                kind: ProjectKind::Cli,
                 architecture: Architecture::Layered,
             },
             tree: TemplateTree::new(),
@@ -264,7 +268,7 @@ mod tests {
         let matcher = TargetMatcher {
             language: Language::Rust,
             framework: None,
-            project_type: ProjectType::Cli,
+            kind: ProjectKind::Cli,
             architecture: Architecture::Layered,
         };
 
@@ -278,7 +282,7 @@ mod tests {
         let matcher = TargetMatcher {
             language: Language::Python,
             framework: None,
-            project_type: ProjectType::Cli,
+            kind: ProjectKind::Cli,
             architecture: Architecture::Layered,
         };
 
@@ -292,8 +296,8 @@ mod tests {
         let matcher = TargetMatcher {
             language: Language::Rust,
             framework: None,
-            project_type: ProjectType::Cli,
-            architecture: Architecture::Mvc,
+            kind: ProjectKind::Cli,
+            architecture: Architecture::MVC,
         };
 
         let target = rust_cli_layered_target();
@@ -306,12 +310,14 @@ mod tests {
         let matcher = TargetMatcher {
             language: Language::Rust,
             framework: None,
-            project_type: ProjectType::Cli,
+            kind: ProjectKind::Cli,
             architecture: Architecture::Layered,
         };
 
         let mut target = rust_cli_layered_target();
-        // target.framework = Some(Framework::Rust(RustFramework::Axum));
+        target.framework = Some(Framework::Rust(RustFramework::Axum));
+
+        println!("{target:?} {matcher:?}");
 
         assert!(!matcher.matches(&target));
     }
@@ -321,7 +327,7 @@ mod tests {
         let matcher = TargetMatcher {
             language: Language::Rust,
             framework: Some(Framework::Rust(RustFramework::Axum)),
-            project_type: ProjectType::Cli,
+            kind: ProjectKind::Cli,
             architecture: Architecture::Layered,
         };
 

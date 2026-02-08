@@ -2,7 +2,7 @@
 
 use crate::domain::DomainError;
 
-use super::{Architecture, Framework, Language, ProjectType, Target};
+use super::{Architecture, Framework, Language, ProjectKind, Target};
 use crate::domain::{FilePermissions, RelativePath};
 
 // ============================================================================
@@ -148,7 +148,7 @@ impl TemplateMetadata {
 pub struct TargetMatcher {
     pub language: Language,
     pub framework: Option<Framework>,
-    pub project_type: ProjectType,
+    pub kind: ProjectKind,
     pub architecture: Architecture,
 }
 
@@ -157,9 +157,10 @@ impl TargetMatcher {
     ///
     /// All fields must match exactly.
     pub fn matches(&self, target: &Target) -> bool {
+        println!("{self:?}");
         self.language == target.language()
-            && self.framework == target.framework().copied()
-            && self.project_type == target.project_type()
+            && self.framework == target.framework()
+            && self.kind == target.kind()
             && self.architecture == target.architecture()
     }
 
@@ -174,7 +175,7 @@ impl TargetMatcher {
         if self.framework.is_some() {
             score += 1;
         }
-        score += 1; // project_type (always present)
+        score += 1; // kind (always present)
         score += 1; // architecture (always present)
         score
     }
@@ -313,7 +314,7 @@ mod tests {
         TargetMatcher {
             language: Language::Rust,
             framework: None,
-            project_type: ProjectType::Cli,
+            kind: ProjectKind::Cli,
             architecture: Architecture::Layered,
         }
     }
@@ -343,8 +344,10 @@ mod tests {
 
         let target = Target::builder()
             .language(Language::Rust)
-            .project_type(ProjectType::Cli)
+            .kind(ProjectKind::Cli)
+            .unwrap()
             .architecture(Architecture::Layered)
+            .unwrap()
             .build()
             .unwrap();
 
@@ -357,7 +360,8 @@ mod tests {
 
         let target = Target::builder()
             .language(Language::Python)
-            .project_type(ProjectType::Cli)
+            .kind(ProjectKind::Cli)
+            .unwrap()
             .build()
             .unwrap();
 
@@ -365,12 +369,13 @@ mod tests {
     }
 
     #[test]
-    fn target_matcher_rejects_different_project_type() {
+    fn target_matcher_rejects_different_kind() {
         let matcher = rust_cli_matcher();
 
         let target = Target::builder()
             .language(Language::Rust)
-            .project_type(ProjectType::Backend)
+            .kind(ProjectKind::WebBackend)
+            .unwrap()
             .build()
             .unwrap();
 
@@ -382,14 +387,14 @@ mod tests {
         let matcher_no_framework = TargetMatcher {
             language: Language::Rust,
             framework: None,
-            project_type: ProjectType::Cli,
+            kind: ProjectKind::Cli,
             architecture: Architecture::Layered,
         };
 
         let matcher_with_framework = TargetMatcher {
             language: Language::Rust,
             framework: Some(Framework::Rust(super::super::RustFramework::Axum)),
-            project_type: ProjectType::Backend,
+            kind: ProjectKind::WebBackend,
             architecture: Architecture::Layered,
         };
 

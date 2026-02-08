@@ -16,7 +16,7 @@ pub enum CliError {
 
     /// Unsupported project type
     #[error("Unsupported project type '{0}'")]
-    UnsupportedProjectType(String),
+    UnsupportedProjectKind(String),
 
     /// Unsupported architecture
     #[error("Unsupported architecture '{0}'")]
@@ -64,7 +64,7 @@ impl CliError {
                     "Example:".cyan()
                 )
             }
-            CliError::UnsupportedProjectType(pt) => {
+            CliError::UnsupportedProjectKind(pt) => {
                 format!(
                     "\n\n{}\n  - cli (command-line application)\n  - backend (web service)\n  - frontend (web app)\n  - fullstack (frontend + backend)\n  - worker (background jobs)\n\n{}\n  scarff new my-api --lang python --type backend --arch layered",
                     "Supported project types:".yellow(),
@@ -196,8 +196,8 @@ mod tests {
     }
 
     #[test]
-    fn unsupported_project_type_error_has_suggestions() {
-        let err = CliError::UnsupportedProjectType("mobile".to_string());
+    fn unsupported_kind_error_has_suggestions() {
+        let err = CliError::UnsupportedProjectKind("mobile".to_string());
         let formatted = err.format_with_suggestions();
         assert!(formatted.contains("Supported project types"));
         assert!(formatted.contains("cli"));
