@@ -13,7 +13,7 @@ use scarff_core::{
 
 use crate::{
     args::{Architecture, Language, NewCommand, ProjectKind},
-    error::{CliError, IntoCli},
+    error::{CliError, CliResul, IntoCli},
     output,
 };
 
@@ -24,7 +24,7 @@ use crate::{
 /// * `cmd` - Parsed command arguments
 /// * `verbose` - Whether to show verbose output
 /// * `quiet` - Whether to suppress non-error output
-pub fn execute(cmd: NewCommand, verbose: bool, quiet: bool) -> Result<()> {
+pub fn execute(cmd: NewCommand, verbose: bool, quiet: bool) -> CliResul<()> {
     debug!("Executing new command with: {:#?}", cmd);
 
     // 1. Resolve project path
@@ -65,8 +65,8 @@ pub fn execute(cmd: NewCommand, verbose: bool, quiet: bool) -> Result<()> {
 
     if !quiet {
         output::show_progress("Scaffolding project", || {
-            engine.scaffold(target, &project_name, &output_dir)
-        })?;
+            Ok(engine.scaffold(target, &project_name, &output_dir)?)
+        })?
     } else {
         engine
             .scaffold(target, &project_name, &output_dir)
@@ -178,7 +178,7 @@ fn validate_project_name(name: &str) -> Result<()> {
 }
 
 /// Build a Target from command arguments.
-fn build_target(cmd: &NewCommand) -> Result<Target, CliError> {
+fn build_target(cmd: &NewCommand) -> CliResul<Target> {
     // Convert CLI enums to core enums
     let language = convert_language(cmd.language);
     let kind = convert_kind(cmd.kind);
@@ -187,19 +187,17 @@ fn build_target(cmd: &NewCommand) -> Result<Target, CliError> {
     // Start building target
     let mut builder = Target::builder()
         .language(language)
-        .kind(kind)
-        .architecture(architecture);
+        .kind(kind)?
+        .architecture(architecture)?;
 
     // Add framework if provided
     if let Some(ref framework_str) = cmd.framework {
         let framework = parse_framework(cmd.language, framework_str)?;
-        builder = builder.framework(framework);
+        builder = builder.framework(framework)?;
     }
 
     // Build and validate
-    builder
-        .build()
-        .map_err(|e| CliError::Core(scarff_core::CoreError::Domain(e)))
+    Ok(builder.build()?)
 }
 
 /// Convert CLI Language to core Language.
@@ -215,8 +213,8 @@ fn convert_language(lang: Language) -> CoreLanguage {
 fn convert_kind(pt: ProjectKind) -> CoreProjectKind {
     match pt {
         ProjectKind::Cli => CoreProjectKind::Cli,
-        ProjectKind::Backend => CoreProjectKind::Backend,
-        ProjectKind::Frontend => CoreProjectKind::Frontend,
+        ProjectKind::WebBackend => CoreProjectKind::WebBackend,
+        ProjectKind::WebFrontend => CoreProjectKind::WebFrontend,
         ProjectKind::Fullstack => CoreProjectKind::Fullstack,
         ProjectKind::Worker => CoreProjectKind::Worker,
     }
@@ -226,9 +224,10 @@ fn convert_kind(pt: ProjectKind) -> CoreProjectKind {
 fn convert_architecture(arch: Architecture) -> CoreArchitecture {
     match arch {
         Architecture::Layered => CoreArchitecture::Layered,
-        Architecture::Mvc => CoreArchitecture::Mvc,
-        Architecture::Modular => CoreArchitecture::Modular,
-        Architecture::AppRouter => CoreArchitecture::AppRouter,
+        Architecture::Mvc => CoreArchitecture::MVC,
+        Architecture::Clean => CoreArchitecture::Clean,
+        Architecture::Modular => todo!(),
+        Architecture::AppRouter => todo!(),
     }
 }
 
@@ -388,8 +387,8 @@ mod tests {
             CoreProjectKind::Cli
         ));
         assert!(matches!(
-            convert_kind(ProjectKind::Backend),
-            CoreProjectKind::Backend
+            convert_kind(ProjectKind::WebBackend),
+            CoreProjectKind::WebBackend
         ));
     }
 
@@ -401,7 +400,7 @@ mod tests {
         ));
         assert!(matches!(
             convert_architecture(Architecture::Mvc),
-            CoreArchitecture::Mvc
+            CoreArchitecture::MVC
         ));
     }
 }

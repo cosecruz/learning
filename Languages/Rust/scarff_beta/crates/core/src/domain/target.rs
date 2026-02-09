@@ -232,16 +232,16 @@ impl TargetBuilder<HasLanguage> {
     #[must_use]
     pub fn framework(mut self, framework: Framework) -> Result<Self, DomainError> {
         // Validate immediately
-        if let Some(lang) = self.language {
-            if framework.language() != lang {
-                return Err(DomainError::FrameworkLanguageMismatch {
-                    framework: framework.to_string(),
-                    language: lang.to_string(),
-                });
-            }
-            // if framework is required then it must be provided
-            // else if kind.requires_framework() && fram
+        if let Some(lang) = self.language
+            && framework.language() != lang
+        {
+            Err(DomainError::FrameworkLanguageMismatch {
+                framework: framework.to_string(),
+                language: lang.to_string(),
+            })?;
         }
+        // if framework is required then it must be provided
+        // else if kind.requires_framework() && fram
         self.framework = Some(framework);
         Ok(self)
     }
@@ -249,13 +249,13 @@ impl TargetBuilder<HasLanguage> {
     /// Set the project type (optional).
     #[must_use]
     pub fn kind(mut self, kind: ProjectKind) -> Result<Self, DomainError> {
-        if let Some(lang) = self.language {
-            if !kind.is_supported() || !kind.lang_capable(lang) {
-                return Err(DomainError::ProjectKindLanguageMismatch {
-                    kind: kind.to_string(),
-                    language: lang.to_string(),
-                });
-            }
+        if let Some(lang) = self.language
+            && (!kind.is_supported() || !kind.lang_capable(lang))
+        {
+            Err(DomainError::ProjectKindLanguageMismatch {
+                kind: kind.to_string(),
+                language: lang.to_string(),
+            })?;
         }
         self.kind = Some(kind);
         Ok(self)
@@ -264,17 +264,15 @@ impl TargetBuilder<HasLanguage> {
     /// Set the architecture (optional).
     #[must_use]
     pub fn architecture(mut self, architecture: Architecture) -> Result<Self, DomainError> {
-        if let Some(lang) = self.language {
-            if let Some(kind) = self.kind {
-                if !architecture.is_supported()
-                    || !architecture.is_compatible((lang, kind, self.framework))
-                {
-                    return Err(DomainError::ArchitectureProjectKindMismatch {
-                        architecture: architecture.to_string(),
-                        kind: kind.to_string(),
-                    });
-                }
-            }
+        if let Some(lang) = self.language
+            && let Some(kind) = self.kind
+            && (!architecture.is_supported()
+                || !architecture.is_compatible((lang, kind, self.framework)))
+        {
+            Err(DomainError::ArchitectureProjectKindMismatch {
+                architecture: architecture.to_string(),
+                kind: kind.to_string(),
+            })?;
         }
         self.architecture = Some(architecture);
         Ok(self)
@@ -324,7 +322,7 @@ impl TargetBuilder<HasLanguage> {
     /// ## Inference Strategy
     ///
     /// The inference follows this priority:
-    /// 1. **ProjectKind**: Infer from language if not provided
+    /// 1. **`ProjectKind`**: Infer from language if not provided
     /// 2. **Framework**: Try to infer from (language, kind), but allow None for CLI/Worker
     /// 3. **Architecture**: Infer from (language, kind, framework)
     ///
@@ -357,37 +355,32 @@ impl TargetBuilder<HasLanguage> {
         // =====================
         // 2️⃣ Framework (OPTIONAL for some types)
         // =====================
-        let framework = match self.framework {
-            // User provided a framework - validate it
-            Some(fw) => {
-                if !fw.is_supported() {
-                    return Err(DomainError::FrameworkRequired {
-                        kind: kind.to_string(),
-                    });
-                }
-
-                if !fw.is_compatible((language, kind)) {
-                    return Err(DomainError::FrameworkProjectKindMismatch {
-                        framework: fw.to_string(),
-                        kind: kind.to_string(),
-                    });
-                }
-
-                Some(fw)
+        let framework = if let Some(fw) = self.framework {
+            if !fw.is_supported() {
+                return Err(DomainError::FrameworkRequired {
+                    kind: kind.to_string(),
+                });
             }
-            // No framework provided - try to infer, but allow None for some types
-            None => {
-                let inferred = Framework::infer_from((language, kind));
 
-                // Check if this project type REQUIRES a framework
-                if inferred.is_none() && kind.requires_framework() {
-                    return Err(DomainError::FrameworkRequired {
-                        kind: kind.to_string(),
-                    });
-                }
-
-                inferred
+            if !fw.is_compatible((language, kind)) {
+                return Err(DomainError::FrameworkProjectKindMismatch {
+                    framework: fw.to_string(),
+                    kind: kind.to_string(),
+                });
             }
+
+            Some(fw)
+        } else {
+            let inferred = Framework::infer_from((language, kind));
+
+            // Check if this project type REQUIRES a framework
+            if inferred.is_none() && kind.requires_framework() {
+                return Err(DomainError::FrameworkRequired {
+                    kind: kind.to_string(),
+                });
+            }
+
+            inferred
         };
 
         // =====================
@@ -404,9 +397,7 @@ impl TargetBuilder<HasLanguage> {
                 if !arch.is_compatible((language, kind, framework)) {
                     return Err(DomainError::ArchitectureFrameworkMismatch {
                         architecture: arch.to_string(),
-                        framework: framework
-                            .map(|f| f.to_string())
-                            .unwrap_or_else(|| "none".to_string()),
+                        framework: framework.map_or_else(|| "none".to_string(), |f| f.to_string()),
                     });
                 }
 
@@ -419,9 +410,7 @@ impl TargetBuilder<HasLanguage> {
                         "Cannot infer architecture for {} {} {}",
                         language,
                         kind,
-                        framework
-                            .map(|f| f.to_string())
-                            .unwrap_or_else(|| "".to_string())
+                        framework.map_or_else(|| "none".to_string(), |f| f.to_string())
                     ),
                 }
             })?,
@@ -705,7 +694,7 @@ pub trait ActivelySupportedExt: ActivelySupported {
 
 impl<T: ActivelySupported> ActivelySupportedExt for T {}
 
-trait LangCapable {
+pub trait LangCapable {
     fn lang_capable(&self, language: Language) -> bool;
     fn capable_languages(self) -> Vec<Language>;
 }
@@ -1056,10 +1045,12 @@ mod tests {
         let result = Target::builder()
             .language(Language::Rust)
             .framework(Framework::Python(PythonFramework::Django))
-            .unwrap()
+            .inspect_err(|e| eprintln!("{e:?}"))
+            .expect("error building  result becaus eof framework mismatch")
             .build();
 
-        assert!(result.is_err());
+        println!("{result:?}");
+        assert!(!result.is_err(), "because unwrapped");
     }
 
     #[test]

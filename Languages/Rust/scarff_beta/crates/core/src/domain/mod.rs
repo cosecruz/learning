@@ -13,7 +13,9 @@ mod project_structure;
 mod render_context;
 mod target;
 // mod target_old;
+mod common2;
 mod template;
+mod template2;
 
 // Re-export common types for convenience
 pub(crate) use common::{FilePermissions, RelativePath};

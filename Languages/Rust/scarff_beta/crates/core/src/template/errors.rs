@@ -26,4 +26,6 @@ pub enum TemplateError {
     #[error("Resolve error: no match for target: {target:?}")]
     NoMatch { target: Target },
     // AmbiguousMatch { target: Target, count: usize },
+    #[error("Uuid error: not a valid uuid")]
+    UuidParseError,
 }

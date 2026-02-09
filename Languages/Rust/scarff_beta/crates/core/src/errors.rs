@@ -40,7 +40,7 @@ impl From<std::io::Error> for CoreError {
 /// Result type for core operations.
 ///
 /// Uses anyhow::Result for flexible error handling with context.
-pub type CoreResult<T> = anyhow::Result<T>;
+pub type CoreResult<T> = Result<T, CoreError>;
 
 #[cfg(test)]
 mod tests {

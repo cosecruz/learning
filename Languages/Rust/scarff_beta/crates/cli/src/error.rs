@@ -7,6 +7,7 @@ use owo_colors::OwoColorize;
 use scarff_core::CoreError;
 use thiserror::Error;
 
+pub type CliResul<T> = anyhow::Result<T>;
 /// CLI-specific errors with user-friendly messages.
 #[derive(Debug, Error)]
 pub enum CliError {

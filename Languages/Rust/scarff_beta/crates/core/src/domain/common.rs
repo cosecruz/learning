@@ -50,8 +50,7 @@ impl RelativePath {
         let path = path.into();
         debug_assert!(
             !path.is_absolute(),
-            "RelativePath cannot be absolute: {:?}",
-            path
+            "RelativePath cannot be absolute: {path:?}"
         );
         Self(path)
     }

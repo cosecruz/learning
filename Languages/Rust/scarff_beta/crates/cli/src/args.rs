@@ -218,9 +218,9 @@ pub enum ProjectKind {
     /// Command-line interface application
     Cli,
     /// Backend web service
-    Backend,
+    WebBackend,
     /// Frontend web application
-    Frontend,
+    WebFrontend,
     /// Full-stack application (frontend + backend)
     Fullstack,
     /// Background worker/job processor
@@ -231,8 +231,8 @@ impl std::fmt::Display for ProjectKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ProjectKind::Cli => write!(f, "cli"),
-            ProjectKind::Backend => write!(f, "backend"),
-            ProjectKind::Frontend => write!(f, "frontend"),
+            ProjectKind::WebBackend => write!(f, "backend"),
+            ProjectKind::WebFrontend => write!(f, "frontend"),
             ProjectKind::Fullstack => write!(f, "fullstack"),
             ProjectKind::Worker => write!(f, "worker"),
         }
@@ -252,6 +252,8 @@ pub enum Architecture {
     /// App Router (Next.js specific)
     #[value(name = "app-router")]
     AppRouter,
+    ///Clean / Hexagonal Architecture
+    Clean,
 }
 
 impl std::fmt::Display for Architecture {
@@ -261,6 +263,7 @@ impl std::fmt::Display for Architecture {
             Architecture::Mvc => write!(f, "mvc"),
             Architecture::Modular => write!(f, "modular"),
             Architecture::AppRouter => write!(f, "app-router"),
+            Architecture::Clean => write!(f, "clean"),
         }
     }
 }
@@ -306,11 +309,11 @@ mod tests {
         );
         assert_eq!(
             ProjectKind::from_str("backend", true).unwrap(),
-            ProjectKind::Backend
+            ProjectKind::WebBackend
         );
         assert_eq!(
             ProjectKind::from_str("frontend", true).unwrap(),
-            ProjectKind::Frontend
+            ProjectKind::WebFrontend
         );
         assert_eq!(
             ProjectKind::from_str("fullstack", true).unwrap(),

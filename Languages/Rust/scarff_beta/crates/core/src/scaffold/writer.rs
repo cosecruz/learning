@@ -118,7 +118,7 @@ impl Writer for FileWriter {
             Err(e) => {
                 warn!("Write operation failed, attempting rollback");
                 self.rollback(&structure.root);
-                Err(e).context("failed to write project structure to file system, rolled back")?
+                Err(e)
             }
         }
     }
