@@ -1,10 +1,10 @@
-// crates/core/src/domain/project_structure.rs
 //! ProjectStructure - the output of template rendering.
 
 use std::path::PathBuf;
 
+use crate::domain::common::Permissions;
+
 use super::DomainError;
-use super::common::FilePermissions;
 
 // ============================================================================
 // ProjectStructure
@@ -34,7 +34,7 @@ impl ProjectStructure {
         &mut self,
         path: impl Into<PathBuf>,
         content: String,
-        permissions: FilePermissions,
+        permissions: Permissions,
     ) {
         self.entries.push(FsEntry::File(FileToWrite {
             path: path.into(),
@@ -44,7 +44,7 @@ impl ProjectStructure {
     }
 
     /// Add a directory to the structure (mutable).
-    pub(crate) fn add_directory(&mut self, path: impl Into<PathBuf>, permissions: FilePermissions) {
+    pub(crate) fn add_directory(&mut self, path: impl Into<PathBuf>, permissions: Permissions) {
         self.entries.push(FsEntry::Directory(DirectoryToCreate {
             path: path.into(),
             permissions,
@@ -56,7 +56,7 @@ impl ProjectStructure {
         mut self,
         path: impl Into<PathBuf>,
         content: String,
-        permissions: FilePermissions,
+        permissions: Permissions,
     ) -> Self {
         self.add_file(path, content, permissions);
         self
@@ -66,7 +66,7 @@ impl ProjectStructure {
     pub(crate) fn with_directory(
         mut self,
         path: impl Into<PathBuf>,
-        permissions: FilePermissions,
+        permissions: Permissions,
     ) -> Self {
         self.add_directory(path, permissions);
         self
@@ -88,6 +88,7 @@ impl ProjectStructure {
             };
 
             // Check for duplicates
+            // will this fail for /food/food; it might be duplicate but its valid path?
             if !seen_paths.insert(path) {
                 return Err(DomainError::ProjectStructureError(format!(
                     "Duplicate path: {:?}",
@@ -159,15 +160,11 @@ pub(crate) enum FsEntry {
 pub(crate) struct FileToWrite {
     pub path: PathBuf,
     pub content: String,
-    pub permissions: FilePermissions,
+    pub permissions: Permissions,
 }
 
 impl FileToWrite {
-    pub(crate) fn new(
-        path: impl Into<PathBuf>,
-        content: String,
-        permissions: FilePermissions,
-    ) -> Self {
+    pub(crate) fn new(path: impl Into<PathBuf>, content: String, permissions: Permissions) -> Self {
         Self {
             path: path.into(),
             content,
@@ -194,11 +191,11 @@ impl FileToWrite {
 #[derive(Debug, Clone)]
 pub(crate) struct DirectoryToCreate {
     pub path: PathBuf,
-    pub permissions: FilePermissions,
+    pub permissions: Permissions,
 }
 
 impl DirectoryToCreate {
-    pub(crate) fn new(path: impl Into<PathBuf>, permissions: FilePermissions) -> Self {
+    pub(crate) fn new(path: impl Into<PathBuf>, permissions: Permissions) -> Self {
         Self {
             path: path.into(),
             permissions,
@@ -227,7 +224,7 @@ mod tests {
         structure.add_file(
             "main.rs",
             "fn main() {}".to_string(),
-            FilePermissions::DEFAULT,
+            Permissions::read_write(),
         );
 
         assert_eq!(structure.entries.len(), 1);
@@ -237,7 +234,7 @@ mod tests {
     #[test]
     fn project_structure_add_directory() {
         let mut structure = ProjectStructure::new("/tmp/test");
-        structure.add_directory("src", FilePermissions::DEFAULT);
+        structure.add_directory("src", Permissions::read_write());
 
         assert_eq!(structure.entries.len(), 1);
         assert!(matches!(structure.entries[0], FsEntry::Directory(_)));
@@ -246,16 +243,16 @@ mod tests {
     #[test]
     fn project_structure_builder_style() {
         let structure = ProjectStructure::new("/tmp/test")
-            .with_directory("src", FilePermissions::DEFAULT)
+            .with_directory("src", Permissions::read_write())
             .with_file(
                 "src/main.rs",
                 "fn main() {}".to_string(),
-                FilePermissions::DEFAULT,
+                Permissions::read_write(),
             )
             .with_file(
                 "Cargo.toml",
                 "[package]".to_string(),
-                FilePermissions::DEFAULT,
+                Permissions::read_write(),
             );
 
         assert_eq!(structure.entries.len(), 3);
@@ -266,8 +263,8 @@ mod tests {
     #[test]
     fn project_structure_validate_success() {
         let structure = ProjectStructure::new("/tmp/test")
-            .with_directory("src", FilePermissions::DEFAULT)
-            .with_file("src/main.rs", "".to_string(), FilePermissions::DEFAULT);
+            .with_directory("src", Permissions::read_write())
+            .with_file("src/main.rs", "".to_string(), Permissions::read_write());
 
         assert!(structure.validate().is_ok());
     }
@@ -275,8 +272,8 @@ mod tests {
     #[test]
     fn project_structure_validate_duplicate_fails() {
         let structure = ProjectStructure::new("/tmp/test")
-            .with_file("main.rs", "".to_string(), FilePermissions::DEFAULT)
-            .with_file("main.rs", "".to_string(), FilePermissions::DEFAULT);
+            .with_file("main.rs", "".to_string(), Permissions::read_write())
+            .with_file("main.rs", "".to_string(), Permissions::read_write());
 
         let result = structure.validate();
         assert!(result.is_err());
@@ -289,7 +286,7 @@ mod tests {
     #[test]
     fn project_structure_validate_absolute_path_fails() {
         let mut structure = ProjectStructure::new("/tmp/test");
-        structure.add_file("/absolute/path", "".to_string(), FilePermissions::DEFAULT);
+        structure.add_file("/absolute/path", "".to_string(), Permissions::read_write());
 
         let result = structure.validate();
         assert!(result.is_err());
@@ -298,9 +295,9 @@ mod tests {
     #[test]
     fn project_structure_files_iterator() {
         let structure = ProjectStructure::new("/tmp/test")
-            .with_directory("src", FilePermissions::DEFAULT)
-            .with_file("main.rs", "".to_string(), FilePermissions::DEFAULT)
-            .with_file("lib.rs", "".to_string(), FilePermissions::DEFAULT);
+            .with_directory("src", Permissions::read_write())
+            .with_file("main.rs", "".to_string(), Permissions::read_write())
+            .with_file("lib.rs", "".to_string(), Permissions::read_write());
 
         let files: Vec<_> = structure.files().collect();
         assert_eq!(files.len(), 2);
@@ -309,9 +306,9 @@ mod tests {
     #[test]
     fn project_structure_directories_iterator() {
         let structure = ProjectStructure::new("/tmp/test")
-            .with_directory("src", FilePermissions::DEFAULT)
-            .with_directory("tests", FilePermissions::DEFAULT)
-            .with_file("main.rs", "".to_string(), FilePermissions::DEFAULT);
+            .with_directory("src", Permissions::read_write())
+            .with_directory("tests", Permissions::read_write())
+            .with_file("main.rs", "".to_string(), Permissions::read_write());
 
         let dirs: Vec<_> = structure.directories().collect();
         assert_eq!(dirs.len(), 2);
@@ -319,7 +316,7 @@ mod tests {
 
     #[test]
     fn file_to_write_new() {
-        let file = FileToWrite::new("test.txt", "content".to_string(), FilePermissions::DEFAULT);
+        let file = FileToWrite::new("test.txt", "content".to_string(), Permissions::read_write());
         assert_eq!(file.path, PathBuf::from("test.txt"));
         assert_eq!(file.content, "content");
         assert!(!file.is_empty());
@@ -328,23 +325,23 @@ mod tests {
 
     #[test]
     fn file_to_write_empty() {
-        let file = FileToWrite::new("empty.txt", String::new(), FilePermissions::DEFAULT);
+        let file = FileToWrite::new("empty.txt", String::new(), Permissions::read_write());
         assert!(file.is_empty());
         assert_eq!(file.size(), 0);
     }
 
     #[test]
     fn directory_to_create_new() {
-        let dir = DirectoryToCreate::new("src", FilePermissions::DEFAULT);
+        let dir = DirectoryToCreate::new("src", Permissions::read_write());
         assert_eq!(dir.path, PathBuf::from("src"));
     }
 
     #[test]
     fn project_structure_entry_count() {
         let structure = ProjectStructure::new("/tmp/test")
-            .with_directory("src", FilePermissions::DEFAULT)
-            .with_file("main.rs", "".to_string(), FilePermissions::DEFAULT)
-            .with_file("lib.rs", "".to_string(), FilePermissions::DEFAULT);
+            .with_directory("src", Permissions::read_write())
+            .with_file("main.rs", "".to_string(), Permissions::read_write())
+            .with_file("lib.rs", "".to_string(), Permissions::read_write());
 
         assert_eq!(structure.entry_count(), 3);
         assert_eq!(structure.file_count(), 2);

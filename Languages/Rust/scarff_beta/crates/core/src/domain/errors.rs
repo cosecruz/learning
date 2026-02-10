@@ -106,8 +106,9 @@ pub enum DomainError {
     #[error("Template '{template_id:?}' contains absolute path: {path:?}")]
     TemplateAbsolutePath { template_id: String, path: PathBuf },
 
-    #[error("Template '{template_id:?}' is invalid: {reason:?}")]
-    InvalidTemplate { template_id: String, reason: String },
+    /// Template validation failed
+    #[error("Invalid template: {0}")]
+    InvalidTemplate(String),
 
     // ========================================================================
     // ProjectStructure errors (placeholder for future use)

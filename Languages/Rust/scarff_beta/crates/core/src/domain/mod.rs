@@ -1,38 +1,37 @@
-// crates/core/src/domain/mod.rs
 //! Domain models for Scarff.
 //!
 //! This module contains the core business types and logic:
 //! - Target: A validated project configuration
 //! - Template: A reusable project recipe
-//! - Project Structure: The output ready for writing
-//! - Common types: Shared utilities and types
+//! - [`ProjectStructure`]: The output ready for writing
+//! - Common types: Shared utilities
 
-mod common;
+pub mod common;
 mod errors;
 mod project_structure;
 mod render_context;
 mod target;
-// mod target_old;
-mod common2;
 mod template;
-mod template2;
 
-// Re-export common types for convenience
-pub(crate) use common::{FilePermissions, RelativePath};
+// Re-export common types
+pub(crate) use common::{Permissions, RelativePath};
 pub use errors::DomainError;
 
-// Re exporting project_structure
-pub(crate) use project_structure::{
-    FsEntry,
-    // project structure
-    ProjectStructure,
-};
+// Re-export project structure
+pub(crate) use project_structure::{DirectoryToCreate, FileToWrite, FsEntry, ProjectStructure};
+
+// Re-export render context
 pub(crate) use render_context::RenderContext;
+
+// Re-export target types
 pub use target::{
     Architecture, Framework, HasLanguage, Language, NoLanguage, ProjectKind, PythonFramework,
     RustFramework, Target, TargetBuilder, TypeScriptFramework,
 };
+
+// Re-export template types
 pub(crate) use template::{
-    DirectorySpec, FileSpec, TargetMatcher, Template, TemplateContent, TemplateId,
-    TemplateMetadata, TemplateNode, TemplateTree,
+    ContentTemplateId, DirectorySpec, FileSpec, TargetMatcher, TargetMatcherBuilder, Template,
+    TemplateBuilder, TemplateContent, TemplateEngine, TemplateId, TemplateMetadata, TemplateNode,
+    TemplateRecord, TemplateSource, TemplateTree,
 };

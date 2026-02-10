@@ -77,7 +77,7 @@ impl RenderContext {
         let mut result = template.to_string();
 
         for (key, value) in &self.variables {
-            let placeholder = format!("{{{{{}}}}}", key);
+            let placeholder = format!("{{{{{key}}}}}");
             result = result.replace(&placeholder, value);
         }
 
@@ -95,10 +95,7 @@ impl RenderContext {
 /// - Replace hyphens and spaces with underscores
 /// - Convert to lowercase
 fn to_snake_case(s: &str) -> String {
-    s.replace(['-', ' '], "_")
-        .chars()
-        .map(|c| c.to_lowercase().to_string())
-        .collect()
+    split_words(s).join("_")
 }
 
 /// Convert a string to kebab-case.
@@ -107,10 +104,7 @@ fn to_snake_case(s: &str) -> String {
 /// - Replace underscores and spaces with hyphens
 /// - Convert to lowercase
 fn to_kebab_case(s: &str) -> String {
-    s.replace(['_', ' '], "-")
-        .chars()
-        .map(|c| c.to_lowercase().to_string())
-        .collect()
+    split_words(s).join("-")
 }
 
 /// Convert a string to PascalCase.
@@ -120,21 +114,67 @@ fn to_kebab_case(s: &str) -> String {
 /// - Capitalize first letter of each word
 /// - Join without separators
 fn to_pascal_case(s: &str) -> String {
-    s.split(|c: char| c == '-' || c == '_' || c.is_whitespace())
-        .filter(|word| !word.is_empty())
-        .map(|word| {
-            let mut chars = word.chars();
+    split_words(s)
+        .into_iter()
+        .map(|w| {
+            let mut chars = w.chars();
             match chars.next() {
-                None => String::new(),
                 Some(first) => {
-                    let mut result = String::new();
-                    result.push_str(&first.to_uppercase().to_string());
-                    result.push_str(&chars.collect::<String>().to_lowercase());
-                    result
+                    let mut out = String::new();
+                    out.extend(first.to_uppercase());
+                    out.push_str(chars.as_str());
+                    out
                 }
+                None => String::new(),
             }
         })
         .collect()
+}
+
+fn split_words(input: &str) -> Vec<String> {
+    let mut words = Vec::new();
+    let mut current = String::new();
+
+    let mut chars = input.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        if c == '_' || c == '-' || c.is_whitespace() {
+            if !current.is_empty() {
+                words.push(current.to_lowercase());
+                current.clear();
+            }
+            continue;
+        }
+
+        // Word boundary: lower -> upper (myAwesome)
+        if let Some(next) = chars.peek() {
+            if c.is_lowercase() && next.is_uppercase() {
+                current.push(c);
+                words.push(current.to_lowercase());
+                current.clear();
+                continue;
+            }
+
+            // Acronym boundary: HTTPServer -> HTTP + Server
+            if c.is_uppercase()
+                && next.is_uppercase()
+                && chars.clone().nth(1).map_or(false, |n| n.is_lowercase())
+            {
+                current.push(c);
+                words.push(current.to_lowercase());
+                current.clear();
+                continue;
+            }
+        }
+
+        current.push(c);
+    }
+
+    if !current.is_empty() {
+        words.push(current.to_lowercase());
+    }
+
+    words
 }
 
 /// Get the current year as a string.

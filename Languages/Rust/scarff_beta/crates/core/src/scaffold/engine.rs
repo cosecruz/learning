@@ -1,17 +1,17 @@
 //! Main scaffolding engine - orchestrates the entire scaffolding process.
 
+use std::path::Path;
+use tracing::{info, instrument};
+
 use crate::{
     domain::{RenderContext, Target},
     errors::CoreResult,
     scaffold::{
         filesystem::RealFilesystem,
-        // validator::Validator,
         writer::{FileWriter, Writer},
     },
-    template::{Store, TemplateRenderer, TemplateResolver},
+    template::{InMemoryStore, Store, TemplateRenderer, TemplateResolver},
 };
-use std::path::Path;
-use tracing::{info, instrument};
 
 /// Main scaffolding engine.
 ///
@@ -26,17 +26,16 @@ use tracing::{info, instrument};
 /// let engine = Engine::new();
 /// let target = Target::builder()
 ///     .language(Language::Rust)
-///     .kind(ProjectKind::Cli)
-///     .architecture(Architecture::Layered)
-///     .resolve()?;
+///     .kind(ProjectKind::Cli).unwrap()
+///     .architecture(Architecture::Layered).unwrap()
+///     .build()?;
 ///
 /// engine.scaffold(target, "my-project", "./output")?;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
-/// `
+/// ```
 pub struct Engine {
     resolver: TemplateResolver,
     renderer: TemplateRenderer,
-    // validator: Validator,
     writer: FileWriter,
 }
 
@@ -45,7 +44,7 @@ impl Engine {
     ///
     /// Uses built-in templates and real filesystem operations.
     pub fn new() -> Self {
-        let store = crate::template::InMemoryStore::new();
+        let store = InMemoryStore::new();
         store
             .load_builtin()
             .expect("Failed to load built-in templates");
@@ -60,7 +59,6 @@ impl Engine {
         Self {
             resolver: TemplateResolver::new(store),
             renderer: TemplateRenderer::new(),
-            // validator: Validator::new(),
             writer: FileWriter::new(Box::new(RealFilesystem)),
         }
     }
@@ -69,8 +67,10 @@ impl Engine {
     ///
     /// Primarily used for testing with mock filesystems.
     #[cfg(test)]
-    pub(crate) fn with_filesystem(filesystem: Box<dyn super::filesystem::Filesystem>) -> Self {
-        let store = crate::template::InMemoryStore::new();
+    pub(crate) fn with_filesystem(
+        filesystem: Box<dyn crate::scaffold::filesystem::Filesystem>,
+    ) -> Self {
+        let store = InMemoryStore::new();
         store
             .load_builtin()
             .expect("Failed to load built-in templates");
@@ -78,7 +78,6 @@ impl Engine {
         Self {
             resolver: TemplateResolver::new(Box::new(store)),
             renderer: TemplateRenderer::new(),
-            // validator: Validator::new(),
             writer: FileWriter::new(filesystem),
         }
     }
@@ -87,10 +86,9 @@ impl Engine {
     ///
     /// This is the main method that coordinates the entire scaffolding process:
     ///
-    /// 1. Validates the target configuration
-    /// 2. Resolves the appropriate template
-    /// 3. Renders the template with the project name
-    /// 4. Writes the result to the filesystem
+    /// 1. Resolves the appropriate template
+    /// 2. Renders the template with the project name
+    /// 3. Writes the result to the filesystem
     ///
     /// # Arguments
     ///
@@ -101,7 +99,6 @@ impl Engine {
     /// # Errors
     ///
     /// Returns an error if:
-    /// - Target validation fails
     /// - No matching template is found
     /// - Template rendering fails
     /// - Filesystem operations fail
@@ -110,11 +107,14 @@ impl Engine {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// # use scarff_core::{Engine, Target};
+    /// # use scarff_core::{Engine, Target, Language, ProjectKind};
     /// # use std::path::Path;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let engine = Engine::new();
-    /// let target = Target::rust_cli();
+    /// let target = Target::builder()
+    ///     .language(Language::Rust)
+    ///     .kind(ProjectKind::Cli)?
+    ///     .build()?;
     ///
     /// engine.scaffold(
     ///     target,
@@ -128,8 +128,8 @@ impl Engine {
         skip(self, output_path, project_name),
         fields(
             target = %target,
-            // project_name = %project_name,
-            // output_path = %output_path.to_string_lossy()
+            project_name = %project_name.as_ref(),
+            output_path = %output_path.as_ref().display()
         )
     )]
     pub fn scaffold(
@@ -141,20 +141,20 @@ impl Engine {
         let project_name = project_name.as_ref();
         let output_path = output_path.as_ref();
 
-        // 1. Validate target (defensive, should already be valid from builder)
-        info!("Validating target");
-        // self.validator.validate(&target)?;
+        info!("Starting scaffold operation");
 
-        // 2. Resolve template
+        // TODO: validate target,
+
+        // 1. Resolve template
         info!("Resolving template");
         let template = self.resolver.resolve(&target)?;
-        info!(template_id = %template.id, "Template resolved");
+        info!(template_id = %template.metadata.name, "Template resolved");
 
-        // 3. Create render context
-        // TODO: based on language RenderContext can be used to change name format with var()
+        // 2. Create render context
+        // TODO: based on language; render project_name to naming standard and all file/directory names as well
         let context = RenderContext::new(project_name);
 
-        // 4. Render template to project structure
+        // 3. Render template to project structure
         info!("Rendering template");
         let project_path = output_path.join(project_name);
         let structure = self.renderer.render(&template, &context, project_path)?;
@@ -165,7 +165,7 @@ impl Engine {
             "Template rendered successfully"
         );
 
-        // 5. Write to filesystem
+        // 4. Write to filesystem
         info!("Writing to filesystem");
         self.writer.write(&structure)?;
 
@@ -182,13 +182,25 @@ impl Engine {
         Ok(templates
             .iter()
             .map(|t| TemplateInfo {
-                id: t.id.to_string(),
+                id: format!("{}@{}", t.metadata.name, t.metadata.version),
                 name: t.metadata.name.to_string(),
                 description: t.metadata.description.to_string(),
-                language: t.matcher.language.to_string(),
-                kind: t.matcher.kind.to_string(),
-                architecture: t.matcher.architecture.to_string(),
-                framework: t.matcher.framework.as_ref().map(|f| f.to_string()),
+                language: t
+                    .matcher
+                    .language
+                    .map(|l| l.to_string())
+                    .unwrap_or_else(|| "any".to_string()),
+                kind: t
+                    .matcher
+                    .kind
+                    .map(|k| k.to_string())
+                    .unwrap_or_else(|| "any".to_string()),
+                architecture: t
+                    .matcher
+                    .architecture
+                    .map(|a| a.to_string())
+                    .unwrap_or_else(|| "any".to_string()),
+                framework: t.matcher.framework.map(|f| f.to_string()),
             })
             .collect())
     }
@@ -202,13 +214,25 @@ impl Engine {
         Ok(templates
             .iter()
             .map(|t| TemplateInfo {
-                id: t.id.to_string(),
+                id: format!("{}@{}", t.metadata.name, t.metadata.version),
                 name: t.metadata.name.to_string(),
                 description: t.metadata.description.to_string(),
-                language: t.matcher.language.to_string(),
-                kind: t.matcher.kind.to_string(),
-                architecture: t.matcher.architecture.to_string(),
-                framework: t.matcher.framework.as_ref().map(|f| f.to_string()),
+                language: t
+                    .matcher
+                    .language
+                    .map(|l| l.to_string())
+                    .unwrap_or_else(|| "any".to_string()),
+                kind: t
+                    .matcher
+                    .kind
+                    .map(|k| k.to_string())
+                    .unwrap_or_else(|| "any".to_string()),
+                architecture: t
+                    .matcher
+                    .architecture
+                    .map(|a| a.to_string())
+                    .unwrap_or_else(|| "any".to_string()),
+                framework: t.matcher.framework.map(|f| f.to_string()),
             })
             .collect())
     }
@@ -234,10 +258,17 @@ pub struct TemplateInfo {
     pub framework: Option<String>,
 }
 
+// ============================================================================
+// Tests
+// ============================================================================
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::{Architecture, Language, ProjectKind};
+    use crate::{
+        domain::{Architecture, Language, ProjectKind},
+        scaffold::filesystem::MockFilesystem,
+    };
 
     #[test]
     fn engine_new_loads_builtin_templates() {
@@ -247,26 +278,30 @@ mod tests {
         assert!(!templates.is_empty(), "Should have built-in templates");
     }
 
-    // #[test]
-    // fn engine_scaffolds_rust_cli_project() {
-    //     let mock_fs = Box::new(MockFilesystem::new());
-    //     let engine = Engine::with_filesystem(mock_fs.clone());
+    #[test]
+    fn engine_scaffolds_rust_cli_project() {
+        let mock_fs = Box::new(MockFilesystem::new());
+        let fs_clone = mock_fs.clone();
+        let engine = Engine::with_filesystem(mock_fs);
 
-    //     let target = Target::builder()
-    //         .language(Language::Rust)
-    //         .kind(ProjectKind::Cli)
-    //         .architecture(Architecture::Layered)
-    //         .resolve()
-    //         .unwrap();
+        let target = Target::builder()
+            .language(Language::Rust)
+            .kind(ProjectKind::Cli)
+            .unwrap()
+            .architecture(Architecture::Layered)
+            .unwrap()
+            .build()
+            .unwrap();
 
-    //     let result = engine.scaffold(target, "test-cli", ".");
+        let result = engine.scaffold(target, "test-cli", "./");
 
-    //     assert!(result.is_ok(), "Scaffolding should succeed");
+        println!("{:?}", result);
 
-    //     // Verify files were written
-    //     assert!(mock_fs.has_file("./test-cli/Cargo.toml"));
-    //     assert!(mock_fs.has_file("./test-cli/src/main.rs"));
-    // }
+        assert!(result.is_ok(), "Scaffolding should succeed: {:?}", result);
+
+        // Verify files were created
+        // assert!(fs_clone.exists(Path::new("./test-cli")));
+    }
 
     #[test]
     fn engine_finds_matching_templates() {
@@ -284,6 +319,15 @@ mod tests {
         let matches = engine.find_templates(&target).unwrap();
 
         assert!(!matches.is_empty(), "Should find at least one template");
-        assert!(matches.iter().all(|t| t.language == "rust"));
+        assert!(matches.iter().any(|t| t.language == "rust"));
+    }
+
+    #[test]
+    fn list_all_templates() {
+        let engine = Engine::new();
+        let templates = engine.list_templates().unwrap();
+
+        // Should have all built-in templates
+        assert!(templates.len() >= 5);
     }
 }

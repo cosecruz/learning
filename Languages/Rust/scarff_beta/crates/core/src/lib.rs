@@ -183,30 +183,6 @@ pub mod prelude {
 // Library Configuration
 // ============================================================================
 
-/// Initialize logging for the library.
-///
-/// This is only available when the `logging` feature is enabled.
-/// CLI applications should handle their own logging setup.
-///
-/// # Examples
-///
-/// ```rust,no_run
-/// #[cfg(feature = "logging")]
-/// scarff_core::init_logging();
-/// ```
-#[cfg(feature = "logging")]
-pub fn init_logging() {
-    use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
-
-    tracing_subscriber::registry()
-        .with(
-            EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| EnvFilter::new("scarff_core=info")),
-        )
-        .with(tracing_subscriber::fmt::layer())
-        .init();
-}
-
 // ============================================================================
 // Tests
 // ============================================================================

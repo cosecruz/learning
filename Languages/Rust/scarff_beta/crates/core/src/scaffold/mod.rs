@@ -1,14 +1,15 @@
-//! This is Scaffold Engine module
-//! It orchestrates and coordinates the entire scaffolding process
-//! Consists of :
-//! - engine: the main orchestrator
-//! - filesystem: abstract adapter/port I/O that the actual external filesystem will use
+//! Scaffold orchestration module.
+//!
+//! This module coordinates the entire scaffolding process:
+//! - Engine: Main orchestrator
+//! - Writer: Filesystem operations
+//! - Filesystem: Abstraction for testability
 
 pub mod engine;
 pub mod errors;
 pub mod filesystem;
-mod validator;
-mod writer;
+pub(crate) mod writer;
 
 pub use engine::{Engine, TemplateInfo};
 pub use errors::ScaffoldError;
+pub(crate) use writer::{FileWriter, Writer};

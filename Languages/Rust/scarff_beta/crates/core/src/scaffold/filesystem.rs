@@ -29,7 +29,7 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use crate::domain::FilePermissions;
+use crate::domain::Permissions;
 
 // ============================================================================
 // Filesystem Trait
@@ -59,7 +59,7 @@ pub trait Filesystem: Send + Sync {
     /// # Errors
     ///
     /// Returns an error if permissions cannot be set.
-    fn set_permissions(&self, path: &Path, permissions: FilePermissions) -> io::Result<()>;
+    fn set_permissions(&self, path: &Path, permissions: Permissions) -> io::Result<()>;
 
     /// Check if a path exists.
     fn exists(&self, path: &Path) -> bool;
@@ -117,10 +117,10 @@ impl Filesystem for RealFilesystem {
     }
 
     #[cfg(unix)]
-    fn set_permissions(&self, path: &Path, permissions: FilePermissions) -> io::Result<()> {
+    fn set_permissions(&self, path: &Path, permissions: Permissions) -> io::Result<()> {
         use std::os::unix::fs::PermissionsExt;
 
-        if permissions.executable {
+        if permissions.executable_flag() {
             let metadata = std::fs::metadata(path)?;
             let mut perms = metadata.permissions();
 
@@ -135,7 +135,7 @@ impl Filesystem for RealFilesystem {
     }
 
     #[cfg(windows)]
-    fn set_permissions(&self, _path: &Path, _permissions: FilePermissions) -> io::Result<()> {
+    fn set_permissions(&self, _path: &Path, _permissions: Permissions) -> io::Result<()> {
         // Windows doesn't have executable bit
         // Could use file extensions or other mechanisms if needed
         Ok(())
@@ -199,7 +199,7 @@ struct MockFilesystemInner {
 #[derive(Debug, Clone)]
 struct FileEntry {
     content: String,
-    permissions: FilePermissions,
+    permissions: Permissions,
 }
 
 impl MockFilesystem {
@@ -243,7 +243,7 @@ impl MockFilesystem {
     /// # Errors
     ///
     /// Returns an error if the file doesn't exist.
-    pub fn get_permissions(&self, path: &Path) -> io::Result<FilePermissions> {
+    pub fn get_permissions(&self, path: &Path) -> io::Result<Permissions> {
         let inner = self
             .inner
             .read()
@@ -267,7 +267,7 @@ impl MockFilesystem {
     ///
     /// Returns an error if the file doesn't exist.
     pub fn is_executable(&self, path: &Path) -> io::Result<bool> {
-        Ok(self.get_permissions(path)?.executable)
+        Ok(self.get_permissions(path)?.executable_flag())
     }
 
     /// List all files in the mock filesystem.
@@ -346,14 +346,14 @@ impl Filesystem for MockFilesystem {
             path.to_path_buf(),
             FileEntry {
                 content: content.to_string(),
-                permissions: FilePermissions::DEFAULT,
+                permissions: Permissions::read_write(),
             },
         );
 
         Ok(())
     }
 
-    fn set_permissions(&self, path: &Path, permissions: FilePermissions) -> io::Result<()> {
+    fn set_permissions(&self, path: &Path, permissions: Permissions) -> io::Result<()> {
         let mut inner = self
             .inner
             .write()
@@ -484,7 +484,7 @@ mod tests {
         assert!(!fs.is_executable(Path::new("/test/script.sh")).unwrap());
 
         // Make executable
-        fs.set_permissions(Path::new("/test/script.sh"), FilePermissions::EXECUTABLE)
+        fs.set_permissions(Path::new("/test/script.sh"), Permissions::executable())
             .unwrap();
 
         assert!(fs.is_executable(Path::new("/test/script.sh")).unwrap());
@@ -646,7 +646,7 @@ mod tests {
             .unwrap();
 
         // Set executable
-        fs.set_permissions(&file_path, FilePermissions::EXECUTABLE)
+        fs.set_permissions(&file_path, Permissions::executable())
             .unwrap();
 
         // Verify

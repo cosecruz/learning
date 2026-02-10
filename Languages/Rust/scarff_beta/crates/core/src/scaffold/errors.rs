@@ -1,16 +1,19 @@
 //! Errors for scaffolding operations.
 
 use std::path::PathBuf;
+use std::sync::Arc;
 use thiserror::Error;
 
 /// Errors that can occur during scaffolding operations.
+///
+/// All variants are cloneable to support concurrent operations.
 #[derive(Debug, Error, Clone)]
 pub enum ScaffoldError {
     /// Target validation failed
     #[error("Invalid target configuration: {reason}")]
     InvalidTarget {
         reason: String,
-        // Removed Box<dyn Error> - store as String instead for Clone
+        /// Source error message (stored as String for Clone)
         source_error: Option<String>,
     },
 
@@ -30,13 +33,21 @@ pub enum ScaffoldError {
     FilesystemWrite {
         path: PathBuf,
         reason: String,
-        // Changed from std::io::Error to String for Clone
-        io_error: String,
+        /// Wrapped in Arc to preserve error while supporting Clone
+        io_error: Arc<std::io::Error>,
     },
 
     /// Project directory already exists
     #[error("Project directory already exists: {path}")]
     ProjectExists { path: PathBuf },
+
+    /// Permission denied
+    #[error("Permission denied: {path}")]
+    PermissionDenied { path: PathBuf },
+
+    /// Validation failed
+    #[error("Validation failed: {reason}")]
+    ValidationFailed { reason: String },
 }
 
 impl ScaffoldError {
@@ -68,7 +79,37 @@ impl ScaffoldError {
         ScaffoldError::FilesystemWrite {
             path: path.into(),
             reason: reason.into(),
-            io_error: source.to_string(),
+            io_error: Arc::new(source),
+        }
+    }
+
+    /// Create a PermissionDenied error.
+    pub fn permission_denied(path: impl Into<PathBuf>) -> Self {
+        ScaffoldError::PermissionDenied { path: path.into() }
+    }
+
+    /// Create a ValidationFailed error.
+    pub fn validation_failed(reason: impl Into<String>) -> Self {
+        ScaffoldError::ValidationFailed {
+            reason: reason.into(),
+        }
+    }
+
+    /// Check if this is a filesystem write error.
+    pub fn is_filesystem_error(&self) -> bool {
+        matches!(self, ScaffoldError::FilesystemWrite { .. })
+    }
+
+    /// Check if this is a permission error.
+    pub fn is_permission_error(&self) -> bool {
+        matches!(self, ScaffoldError::PermissionDenied { .. })
+    }
+
+    /// Get the underlying IO error, if this is a filesystem error.
+    pub fn io_error(&self) -> Option<&std::io::Error> {
+        match self {
+            ScaffoldError::FilesystemWrite { io_error, .. } => Some(io_error.as_ref()),
+            _ => None,
         }
     }
 }
@@ -79,10 +120,14 @@ impl From<std::io::Error> for ScaffoldError {
         ScaffoldError::FilesystemWrite {
             path: PathBuf::from("unknown"),
             reason: "I/O operation failed".to_string(),
-            io_error: err.to_string(),
+            io_error: Arc::new(err),
         }
     }
 }
+
+// ============================================================================
+// Tests
+// ============================================================================
 
 #[cfg(test)]
 mod tests {
@@ -92,6 +137,17 @@ mod tests {
     fn scaffold_error_is_cloneable() {
         let err = ScaffoldError::ProjectExists {
             path: PathBuf::from("/tmp/test"),
+        };
+        let _cloned = err.clone();
+    }
+
+    #[test]
+    fn scaffold_error_io_wrapped_is_cloneable() {
+        let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "test");
+        let err = ScaffoldError::FilesystemWrite {
+            path: PathBuf::from("/tmp/test"),
+            reason: "failed".to_string(),
+            io_error: Arc::new(io_err),
         };
         let _cloned = err.clone();
     }
@@ -144,7 +200,7 @@ mod tests {
         {
             assert_eq!(path, PathBuf::from("/tmp/file"));
             assert_eq!(reason, "Cannot write");
-            assert!(io_error.contains("permission denied"));
+            assert_eq!(io_error.kind(), std::io::ErrorKind::PermissionDenied);
         } else {
             panic!("Expected FilesystemWrite variant");
         }
@@ -159,5 +215,54 @@ mod tests {
             scaffold_err,
             ScaffoldError::FilesystemWrite { .. }
         ));
+        assert!(scaffold_err.is_filesystem_error());
+    }
+
+    #[test]
+    fn error_predicates() {
+        let fs_err = ScaffoldError::filesystem_write(
+            "/tmp/test",
+            "failed",
+            std::io::Error::new(std::io::ErrorKind::NotFound, "test"),
+        );
+        let perm_err = ScaffoldError::permission_denied("/tmp/test");
+
+        assert!(fs_err.is_filesystem_error());
+        assert!(!fs_err.is_permission_error());
+
+        assert!(!perm_err.is_filesystem_error());
+        assert!(perm_err.is_permission_error());
+    }
+
+    #[test]
+    fn can_extract_io_error() {
+        let original = std::io::Error::new(std::io::ErrorKind::PermissionDenied, "denied");
+        let err = ScaffoldError::filesystem_write("/tmp/test", "failed", original);
+
+        let extracted = err.io_error().unwrap();
+        assert_eq!(extracted.kind(), std::io::ErrorKind::PermissionDenied);
+    }
+
+    #[test]
+    fn permission_denied_error() {
+        let err = ScaffoldError::permission_denied("/tmp/test");
+        assert!(err.is_permission_error());
+
+        if let ScaffoldError::PermissionDenied { path } = err {
+            assert_eq!(path, PathBuf::from("/tmp/test"));
+        } else {
+            panic!("Expected PermissionDenied variant");
+        }
+    }
+
+    #[test]
+    fn validation_failed_error() {
+        let err = ScaffoldError::validation_failed("invalid structure");
+
+        if let ScaffoldError::ValidationFailed { reason } = err {
+            assert_eq!(reason, "invalid structure");
+        } else {
+            panic!("Expected ValidationFailed variant");
+        }
     }
 }

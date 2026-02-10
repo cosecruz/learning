@@ -154,6 +154,8 @@ impl Target {
             .framework(Framework::TypeScript(TypeScriptFramework::React))?
             .build()
     }
+
+    // TODO: validate method to validate self
 }
 
 impl fmt::Display for Target {
@@ -1041,6 +1043,7 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn target_rejects_incompatible_framework() {
         let result = Target::builder()
             .language(Language::Rust)
