@@ -357,15 +357,19 @@ mod tests {
         let writer = FileWriter::new(fs);
 
         // Create a structure where writing will fail partway through
-        let mut structure = ProjectStructure::new("/test-project");
+        let mut structure = ProjectStructure::new("/");
         structure.add_file(
             "src/main.rs",
             "content".to_string(),
             Permissions::read_write(),
         );
 
-        // This should trigger rollback because parent dir doesn't exist
+        println!("{structure:?}");
+
+        // This should trigger rollback because parent dir doesn't exist? i am not sure this fails
         let result = writer.write(&structure);
+
+        println!("{result:?}");
 
         // Write should fail
         assert!(result.is_err());

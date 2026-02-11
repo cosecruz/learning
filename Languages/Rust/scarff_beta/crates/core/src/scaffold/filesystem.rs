@@ -191,7 +191,7 @@ pub struct MockFilesystem {
 }
 
 #[derive(Debug, Clone)]
-struct MockFilesystemInner {
+pub struct MockFilesystemInner {
     files: HashMap<PathBuf, FileEntry>,
     directories: HashSet<PathBuf>,
 }

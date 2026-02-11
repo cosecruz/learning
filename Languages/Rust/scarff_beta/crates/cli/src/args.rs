@@ -27,9 +27,9 @@ use anyhow::Result;
         # Create a Rust CLI project\n  \
         scarff new my-cli --lang rust --type cli --arch layered\n\n  \
         # Create a Python backend with FastAPI\n  \
-        scarff new my-api --lang=python --type=backend --framework=fastapi\n\n  \
+        scarff new my-api --lang=python --type=web_api --framework=fastapi\n\n  \
         # Short form with output directory\n  \
-        scarff new ../my-app -l rust -t backend -a layered -f axum\n\n  \
+        scarff new ../my-app -l rust -t web_api -a layered -f axum\n\n  \
         # Interactive mode (future feature)\n  \
         scarff new my-project --interactive\n\n\
         For more information, visit: https://github.com/yourusername/scarff"
@@ -218,8 +218,10 @@ pub enum ProjectKind {
     /// Command-line interface application
     Cli,
     /// Backend web service
-    WebBackend,
+    #[value(name = "web_api")]
+    WebApi,
     /// Frontend web application
+    #[value(name = "web_fe")]
     WebFrontend,
     /// Full-stack application (frontend + backend)
     Fullstack,
@@ -231,8 +233,8 @@ impl std::fmt::Display for ProjectKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ProjectKind::Cli => write!(f, "cli"),
-            ProjectKind::WebBackend => write!(f, "backend"),
-            ProjectKind::WebFrontend => write!(f, "frontend"),
+            ProjectKind::WebApi => write!(f, "web_api"),
+            ProjectKind::WebFrontend => write!(f, "web_frontend"),
             ProjectKind::Fullstack => write!(f, "fullstack"),
             ProjectKind::Worker => write!(f, "worker"),
         }
@@ -303,13 +305,16 @@ mod tests {
 
     #[test]
     fn test_kind_value_enum() {
+        let p = ProjectKind::from_str("web_api", true);
+
+        println!("{p:?}");
         assert_eq!(
             ProjectKind::from_str("cli", true).unwrap(),
             ProjectKind::Cli
         );
         assert_eq!(
-            ProjectKind::from_str("backend", true).unwrap(),
-            ProjectKind::WebBackend
+            ProjectKind::from_str("web_api", true).unwrap(),
+            ProjectKind::WebApi
         );
         assert_eq!(
             ProjectKind::from_str("frontend", true).unwrap(),
@@ -426,6 +431,7 @@ mod tests {
         ])
         .unwrap();
 
+        println!("{cli:?}");
         if let Commands::New(cmd) = cli.command {
             assert_eq!(cmd.framework, Some("axum".to_string()));
         } else {

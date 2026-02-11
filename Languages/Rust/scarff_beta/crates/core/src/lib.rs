@@ -118,7 +118,7 @@
 // Private modules (not exposed to users)
 mod domain;
 mod errors;
-mod scaffold;
+pub mod scaffold;
 mod template;
 
 // ============================================================================

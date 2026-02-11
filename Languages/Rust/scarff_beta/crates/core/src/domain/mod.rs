@@ -12,6 +12,7 @@ mod project_structure;
 mod render_context;
 mod target;
 mod template;
+pub(crate) mod validator;
 
 // Re-export common types
 pub(crate) use common::{Permissions, RelativePath};

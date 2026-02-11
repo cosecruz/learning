@@ -9,9 +9,13 @@ use std::{
     sync::{Arc, RwLock},
 };
 use tracing::{debug, info, instrument, warn};
+use uuid::Uuid;
 
 use crate::{
-    domain::Target,
+    domain::{
+        Target,
+        validator::{self, validate_template},
+    },
     errors::CoreResult,
     template::{Template, TemplateError, TemplateId, TemplateRecord},
 };
@@ -257,50 +261,7 @@ struct TemplateStore {
     templates: HashMap<TemplateId, Template>,
 }
 
-// ============================================================================
-// Validation
-// ============================================================================
-
-/// Validate a template before insertion.
-///
-/// # Errors
-///
-/// Returns an error if:
-/// - Template metadata is invalid (empty name, etc.)
-/// - Template tree is empty
-/// - Template tree contains invalid paths
-/// TODO: inserts TemplateRecord instead of Template
-/// TODO: validate that
-fn validate_template(template: &Template) -> CoreResult<()> {
-    // Check that name is not empty
-    if template.metadata.name.is_empty() {
-        return Err(
-            TemplateError::InvalidTemplate("Template name cannot be empty".to_string()).into(),
-        );
-    }
-
-    // Check that version is not empty
-    if template.metadata.version.is_empty() {
-        return Err(
-            TemplateError::InvalidTemplate("Template version cannot be empty".to_string()).into(),
-        );
-    }
-
-    // Validate tree has at least one node
-    if template.tree.is_empty() {
-        return Err(TemplateError::InvalidTemplate(
-            "Template tree must have at least one node".to_string(),
-        )
-        .into());
-    }
-
-    // Additional validation can be added here:
-    // - Check for duplicate paths
-    // - Validate path characters
-    // - Check permissions
-
-    Ok(())
-}
+// FIXME: or an array of Template Records
 
 // ============================================================================
 // Tests
@@ -319,6 +280,7 @@ mod tests {
 
     fn create_test_template(name: &'static str) -> Template {
         Template {
+            id: TemplateId::new(name, "0.1.0".to_string()),
             matcher: TargetMatcher::builder()
                 .language(Language::Rust)
                 .kind(ProjectKind::Cli)
@@ -401,6 +363,7 @@ mod tests {
     #[test]
     fn validate_invalid_template_empty_tree() {
         let template = Template {
+            id: TemplateId::new("test", "0.1.0".to_string()),
             matcher: TargetMatcher::builder().build(),
             metadata: TemplateMetadata::new("test"),
             tree: TemplateTree::new(),

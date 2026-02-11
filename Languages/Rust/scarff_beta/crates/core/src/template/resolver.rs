@@ -8,7 +8,7 @@
 use tracing::{debug, info, instrument};
 
 use crate::{
-    domain::Target,
+    domain::{Target, validator},
     errors::CoreResult,
     template::{Store, Template, TemplateError},
 };
@@ -77,7 +77,11 @@ impl TemplateResolver {
         info!("Resolving template for target");
 
         // TODO: validate target
-        // TODO: change to return validated TemplateRecord
+        // 1. Validate target
+        validator::validate_target(target)
+            .map_err(|e| TemplateError::InvalidTarget(format!("{}", e)))?;
+        // TODO: change to return validated Template
+        // TODO: TO STORE CONVERT IT TO A Template Record
         // Step 1: Find all matching templates
         let matches = self.store.find(target)?;
 
@@ -136,6 +140,8 @@ impl TemplateResolver {
 
         // Step 6: Return the winner
         let template = most_specific.into_iter().next().unwrap();
+
+        validator::validate_template(&template)?;
         info!(
             template_name = template.metadata.name,
             specificity = max_specificity,
@@ -163,6 +169,7 @@ impl TemplateResolver {
     /// - Building interactive template selectors
     #[instrument(skip(self), fields(target = %target))]
     pub fn find_all(&self, target: &Target) -> CoreResult<Vec<Template>> {
+        validator::validate_target(target)?;
         let matches = self.store.find(target)?;
 
         debug!(count = matches.len(), "Found matching templates");
@@ -187,7 +194,7 @@ impl TemplateResolver {
 mod tests {
     use super::*;
     use crate::{
-        domain::{Architecture, Language, ProjectKind, TargetMatcher},
+        domain::{Architecture, Language, ProjectKind, TargetMatcher, TemplateId},
         template::{
             DirectorySpec, FileSpec, InMemoryStore, TemplateContent, TemplateMetadata,
             TemplateSource, TemplateTree,
@@ -201,6 +208,7 @@ mod tests {
         architecture: Option<Architecture>,
     ) -> Template {
         Template {
+            id: TemplateId::new(name, "0.1.0".to_string()),
             matcher: TargetMatcher {
                 language,
                 framework: None,

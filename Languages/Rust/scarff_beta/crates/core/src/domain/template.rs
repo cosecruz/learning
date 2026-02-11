@@ -31,6 +31,7 @@ use crate::{
     domain::{
         Architecture, DomainError, Framework, Language, ProjectKind, ProjectStructure, Target,
         common::{Permissions, RelativePath},
+        validator,
     },
     template::TemplateError,
 };
@@ -178,25 +179,22 @@ impl fmt::Display for TemplateId {
 pub struct TemplateRecord {
     /// Internal UUID (never shown to users)
     pub uuid: Uuid,
-    /// External identifier (shown to users)
-    pub id: TemplateId,
     /// The actual template definition
     pub template: Template,
 }
 
 impl TemplateRecord {
     /// Create a new template record with generated UUID.
-    pub fn new(id: TemplateId, template: Template) -> Self {
+    pub fn new(template: Template) -> Self {
         Self {
             uuid: Uuid::new_v4(),
-            id,
             template,
         }
     }
 
     /// Create a template record with explicit UUID (for deserialization).
-    pub fn with_uuid(uuid: Uuid, id: TemplateId, template: Template) -> Self {
-        Self { uuid, id, template }
+    pub fn with_uuid(uuid: Uuid, template: Template) -> Self {
+        Self { uuid, template }
     }
 
     /// Validate this template record.
@@ -212,37 +210,7 @@ impl TemplateRecord {
     /// Returns a domain error if validation fails.
     pub fn validate(&self) -> Result<(), DomainError> {
         // Check tree is not empty
-        if self.template.tree.nodes.is_empty() {
-            return Err(DomainError::TemplateEmptyTree {
-                template_id: self.id.to_string(),
-            });
-        }
-
-        let mut seen_paths = std::collections::HashSet::new();
-
-        // Check each node
-        for node in &self.template.tree.nodes {
-            let path = match node {
-                TemplateNode::File(spec) => spec.path.as_path(),
-                TemplateNode::Directory(spec) => spec.path.as_path(),
-            };
-
-            // Check for duplicates
-            if !seen_paths.insert(path) {
-                return Err(DomainError::TemplateDuplicatePath {
-                    template_id: self.id.to_string(),
-                    path: path.to_path_buf(),
-                });
-            }
-
-            // Check not absolute (RelativePath enforces this, but double-check)
-            if path.is_absolute() {
-                return Err(DomainError::TemplateAbsolutePath {
-                    template_id: self.id.to_string(),
-                    path: path.to_path_buf(),
-                });
-            }
-        }
+        validator::validate_template_record(self)?;
 
         Ok(())
     }
@@ -287,6 +255,8 @@ impl TemplateRecord {
 /// ```
 #[derive(Debug, Clone)]
 pub struct Template {
+    /// External identifier (shown to users)
+    pub id: TemplateId,
     /// Matcher defining when this template applies
     pub matcher: TargetMatcher,
     /// Human-readable metadata
@@ -309,12 +279,20 @@ impl Template {
 /// Builder for constructing templates.
 #[derive(Default)]
 pub struct TemplateBuilder {
+    id: Option<TemplateId>,
     matcher: Option<TargetMatcher>,
     metadata: Option<TemplateMetadata>,
     tree: TemplateTree,
 }
 
+// TODO: id and metadata are almost the same think how to align
+
 impl TemplateBuilder {
+    pub fn id(mut self, id: TemplateId) -> Self {
+        self.id = Some(id);
+        self
+    }
+
     pub fn matcher(mut self, matcher: TargetMatcher) -> Self {
         self.matcher = Some(matcher);
         self
@@ -337,6 +315,9 @@ impl TemplateBuilder {
 
     pub fn build(self) -> Result<Template, DomainError> {
         Ok(Template {
+            id: self.id.ok_or_else(|| {
+                DomainError::InvalidTemplate("template id is required".to_string())
+            })?,
             matcher: self
                 .matcher
                 .ok_or_else(|| DomainError::InvalidTemplate("Matcher is required".to_string()))?,
@@ -722,6 +703,8 @@ pub struct ContentTemplateId(pub &'static str);
 
 #[cfg(test)]
 mod tests {
+    use std::process::id;
+
     use super::*;
 
     // -------------------------------------------------------------------------
@@ -750,28 +733,24 @@ mod tests {
 
     #[test]
     fn template_record_generates_uuid() {
-        let record = TemplateRecord::new(
-            TemplateId::new("test", "0.1.0".to_string()),
-            Template {
-                matcher: TargetMatcher::builder().build(),
-                metadata: TemplateMetadata::new("test"),
-                tree: TemplateTree::default(),
-            },
-        );
+        let record = TemplateRecord::new(Template {
+            id: TemplateId::new("test", "0.1.0".to_string()),
+            matcher: TargetMatcher::builder().build(),
+            metadata: TemplateMetadata::new("test"),
+            tree: TemplateTree::default(),
+        });
 
         assert_ne!(record.uuid, Uuid::nil());
     }
 
     #[test]
     fn template_record_validation_empty_tree() {
-        let record = TemplateRecord::new(
-            TemplateId::new("test", "0.1.0".to_string()),
-            Template {
-                matcher: TargetMatcher::builder().build(),
-                metadata: TemplateMetadata::new("test"),
-                tree: TemplateTree::default(),
-            },
-        );
+        let record = TemplateRecord::new(Template {
+            id: TemplateId::new("test", "0.1.0".to_string()),
+            matcher: TargetMatcher::builder().build(),
+            metadata: TemplateMetadata::new("test"),
+            tree: TemplateTree::default(),
+        });
 
         let result = record.validate();
         assert!(result.is_err());
@@ -932,16 +911,18 @@ mod tests {
             .build();
         assert!(result.is_err());
 
+        // requires id
         let result = Template::builder()
             .matcher(TargetMatcher::builder().build())
             .metadata(TemplateMetadata::new("test"))
             .build();
-        assert!(result.is_ok());
+        assert!(result.is_err());
     }
 
     #[test]
     fn template_builder_complete() {
         let template = Template::builder()
+            .id(TemplateId::new("name", "version.".into()))
             .matcher(
                 TargetMatcher::builder()
                     .language(Language::Rust)
@@ -961,7 +942,7 @@ mod tests {
             .build()
             .unwrap();
 
-        assert_eq!(template.tree.len(), 2);
+        assert!(!template.tree.is_empty());
         assert_eq!(template.metadata.name, "Rust CLI");
     }
 }

@@ -5,8 +5,8 @@
 
 use crate::domain::{Architecture, Language, ProjectKind};
 use crate::domain::{
-    DirectorySpec, FileSpec, TargetMatcher, Template, TemplateContent, TemplateMetadata,
-    TemplateNode, TemplateSource, TemplateTree,
+    DirectorySpec, FileSpec, TargetMatcher, Template, TemplateContent, TemplateId,
+    TemplateMetadata, TemplateNode, TemplateSource, TemplateTree,
 };
 
 // ============================================================================
@@ -94,6 +94,7 @@ macro_rules! template {
         }
     ) => {
         Template {
+            id: TemplateId::new($name, $version.to_string()),
             metadata: TemplateMetadata::new($name)
                 .version($version)
                 .description($description)

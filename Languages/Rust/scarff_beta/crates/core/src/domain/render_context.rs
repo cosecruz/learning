@@ -248,7 +248,7 @@ mod tests {
     fn to_snake_case_conversions() {
         assert_eq!(to_snake_case("my-project"), "my_project");
         assert_eq!(to_snake_case("my project"), "my_project");
-        assert_eq!(to_snake_case("MyProject"), "myproject");
+        assert_eq!(to_snake_case("MyProject"), "my_project");
         assert_eq!(to_snake_case("my_project"), "my_project");
     }
 
@@ -256,7 +256,7 @@ mod tests {
     fn to_kebab_case_conversions() {
         assert_eq!(to_kebab_case("my_project"), "my-project");
         assert_eq!(to_kebab_case("my project"), "my-project");
-        assert_eq!(to_kebab_case("MyProject"), "myproject");
+        assert_eq!(to_kebab_case("MyProject"), "my-project");
         assert_eq!(to_kebab_case("my-project"), "my-project");
     }
 
@@ -265,7 +265,7 @@ mod tests {
         assert_eq!(to_pascal_case("my-project"), "MyProject");
         assert_eq!(to_pascal_case("my_project"), "MyProject");
         assert_eq!(to_pascal_case("my project"), "MyProject");
-        assert_eq!(to_pascal_case("MyProject"), "Myproject"); // Normalizes
+        assert_eq!(to_pascal_case("MyProject"), "MyProject"); // Normalizes
     }
 
     #[test]

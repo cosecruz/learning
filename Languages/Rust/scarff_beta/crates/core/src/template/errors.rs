@@ -7,6 +7,10 @@ use crate::domain::{Target, TemplateId};
 /// Errors that can occur during template operations.
 #[derive(Debug, Error, Clone)]
 pub enum TemplateError {
+    /// Target validation failed
+    #[error("Invalid target: {0}")]
+    InvalidTarget(String),
+
     /// Template validation failed
     #[error("Invalid template: {0}")]
     InvalidTemplate(String),

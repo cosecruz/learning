@@ -213,7 +213,7 @@ fn convert_language(lang: Language) -> CoreLanguage {
 fn convert_kind(pt: ProjectKind) -> CoreProjectKind {
     match pt {
         ProjectKind::Cli => CoreProjectKind::Cli,
-        ProjectKind::WebBackend => CoreProjectKind::WebBackend,
+        ProjectKind::WebApi => CoreProjectKind::WebBackend,
         ProjectKind::WebFrontend => CoreProjectKind::WebFrontend,
         ProjectKind::Fullstack => CoreProjectKind::Fullstack,
         ProjectKind::Worker => CoreProjectKind::Worker,
@@ -387,7 +387,7 @@ mod tests {
             CoreProjectKind::Cli
         ));
         assert!(matches!(
-            convert_kind(ProjectKind::WebBackend),
+            convert_kind(ProjectKind::WebApi),
             CoreProjectKind::WebBackend
         ));
     }

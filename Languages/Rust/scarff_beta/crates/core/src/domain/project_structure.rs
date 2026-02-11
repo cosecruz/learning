@@ -2,7 +2,7 @@
 
 use std::path::PathBuf;
 
-use crate::domain::common::Permissions;
+use crate::domain::{common::Permissions, validator};
 
 use super::DomainError;
 
@@ -79,31 +79,8 @@ impl ProjectStructure {
     /// - No absolute paths (all paths should be relative to root)
     /// - No empty file content (warn, not error)
     pub(crate) fn validate(&self) -> Result<(), DomainError> {
-        let mut seen_paths = std::collections::HashSet::new();
-
-        for entry in &self.entries {
-            let path = match entry {
-                FsEntry::File(f) => &f.path,
-                FsEntry::Directory(d) => &d.path,
-            };
-
-            // Check for duplicates
-            // will this fail for /food/food; it might be duplicate but its valid path?
-            if !seen_paths.insert(path) {
-                return Err(DomainError::ProjectStructureError(format!(
-                    "Duplicate path: {:?}",
-                    path
-                )));
-            }
-
-            // Check path is relative (not absolute)
-            if path.is_absolute() {
-                return Err(DomainError::ProjectStructureError(format!(
-                    "Absolute path not allowed in project structure: {:?}",
-                    path
-                )));
-            }
-        }
+        // 4. Validate structure
+        validator::validate_project_structure(self)?;
 
         Ok(())
     }

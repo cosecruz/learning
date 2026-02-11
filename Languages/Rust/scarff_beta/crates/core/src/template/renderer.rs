@@ -7,9 +7,11 @@ use std::path::PathBuf;
 use tracing::{debug, info, instrument, warn};
 
 use crate::{
-    domain::{ProjectStructure, RenderContext, TemplateContent, TemplateNode, TemplateSource},
+    domain::{
+        ProjectStructure, RenderContext, TemplateContent, TemplateNode, TemplateSource, validator,
+    },
     errors::CoreResult,
-    template::Template,
+    template::{Template, TemplateError},
 };
 
 // ============================================================================
@@ -83,7 +85,10 @@ impl TemplateRenderer {
     ) -> CoreResult<ProjectStructure> {
         info!("Starting template rendering");
 
-        // TODO: validate Template = Remplate Record
+        // TODO: validate Template
+        // 1. Validate template record
+        validator::validate_template(template)
+            .map_err(|e| TemplateError::RenderingFailed(format!("{e}")))?;
         // TODO: change to return validated ProjectrStructure
         // need a validator to validate arguments
         // validate that template is not empty and has valid matcher, metadata and tree nodes
@@ -122,13 +127,16 @@ impl TemplateRenderer {
         }
 
         // Validate the structure before returning
+
         info!(
             files = structure.file_count(),
             directories = structure.directory_count(),
             "Template rendering complete, validating structure"
         );
 
-        structure.validate()?;
+        // 4. Validate structure
+        validator::validate_project_structure(&structure)
+            .map_err(|e| TemplateError::RenderingFailed(format!("{e}")))?;
 
         info!("Structure validation successful");
 
@@ -196,7 +204,7 @@ mod tests {
     use super::*;
     use crate::{
         domain::{
-            Language, ProjectKind, TargetMatcher,
+            Language, ProjectKind, TargetMatcher, TemplateId,
             common::{Permissions, RelativePath},
         },
         template::{
@@ -207,6 +215,7 @@ mod tests {
 
     fn create_test_template(name: &'static str) -> Template {
         Template {
+            id: TemplateId::new(name, "0.1.0".to_string()),
             matcher: TargetMatcher::builder()
                 .language(Language::Rust)
                 .kind(ProjectKind::Cli)
@@ -298,6 +307,7 @@ mod tests {
         )));
 
         let template = Template {
+            id: TemplateId::new("test", "0.1.0".to_string()),
             matcher: TargetMatcher::builder().build(),
             metadata: TemplateMetadata::new("test"),
             tree,
@@ -316,6 +326,7 @@ mod tests {
         let renderer = TemplateRenderer::new();
 
         let template = Template {
+            id: TemplateId::new("test", "0.1.0".to_string()),
             matcher: TargetMatcher::builder().build(),
             metadata: TemplateMetadata::new("test"),
             tree: TemplateTree::new(), // Empty!
@@ -344,6 +355,7 @@ mod tests {
         ));
 
         let template = Template {
+            id: TemplateId::new("test", "0.1.0".to_string()),
             matcher: TargetMatcher::builder().build(),
             metadata: TemplateMetadata::new("test"),
             tree,
@@ -382,6 +394,7 @@ year = {{YEAR}}
         )));
 
         let template = Template {
+            id: TemplateId::new("test", "0.1.0".to_string()),
             matcher: TargetMatcher::builder().build(),
             metadata: TemplateMetadata::new("test"),
             tree,
@@ -416,6 +429,7 @@ year = {{YEAR}}
         )));
 
         let template = Template {
+            id: TemplateId::new("test", "0.1.0".to_string()),
             matcher: TargetMatcher::builder().build(),
             metadata: TemplateMetadata::new("test"),
             tree,

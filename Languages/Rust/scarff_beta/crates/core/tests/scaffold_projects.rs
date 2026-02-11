@@ -2,16 +2,14 @@
 // //!
 // //! These tests verify the entire flow from Target → Template → ProjectStructure → Filesystem.
 
-// use scarff_core::{
-//     Target,
-//     domain::{Architecture, Language, ProjectKind},
-//     scaffold::{Engine, filesystem::MockFilesystem},
-// };
-// use std::path::Path;
+use scarff_core::{
+    Architecture, Engine, Language, ProjectKind, Target, scaffold::filesystem::MockFilesystem,
+};
+use std::path::Path;
 
-// // ============================================================================
-// // End-to-End Scaffolding Tests
-// // ============================================================================
+// ============================================================================
+// End-to-End Scaffolding Tests
+// ============================================================================
 
 // #[test]
 // fn test_scaffold_rust_cli_complete_flow() {
@@ -40,17 +38,17 @@
 //         result.err()
 //     );
 
-//     // Verify project directory created
-//     assert!(fs_clone.exists(Path::new("./my-cli-app")));
+// Verify project directory created
+// assert!(fs_clone.exists(Path::new("./my-cli-app")));
 
-//     // Verify source directory created
-//     assert!(fs_clone.exists(Path::new("./my-cli-app/src")));
+// // Verify source directory created
+// assert!(fs_clone.exists(Path::new("./my-cli-app/src")));
 
-//     // Verify files created (at minimum)
-//     assert!(fs_clone.exists(Path::new("./my-cli-app/src/main.rs")));
-//     assert!(fs_clone.exists(Path::new("./my-cli-app/Cargo.toml")));
+// // Verify files created (at minimum)
+// assert!(fs_clone.exists(Path::new("./my-cli-app/src/main.rs")));
+// assert!(fs_clone.exists(Path::new("./my-cli-app/Cargo.toml")));
 
-//     // Verify file count
+// Verify file count
 //     assert!(fs_clone.file_count() >= 2);
 //     assert!(fs_clone.directory_count() >= 1);
 // }
