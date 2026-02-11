@@ -1,0 +1,18 @@
+[package]
+name = "{project_name}-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Application core: domain, use cases, and ports"
+
+[dependencies]
+# Only external dependency - necessary for trait objects in async
+async-trait = { workspace = true }
+# Everything else is std library
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt", "macros"] }
+uuid = { workspace = true }
+chrono = { workspace = true }

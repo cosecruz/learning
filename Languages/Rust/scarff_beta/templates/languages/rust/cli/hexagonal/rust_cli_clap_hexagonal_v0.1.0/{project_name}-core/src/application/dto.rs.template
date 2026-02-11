@@ -1,0 +1,39 @@
+//! Data Transfer Objects for crossing layer boundaries.
+//! Decouples internal domain from external representations.
+
+use crate::domain::{Entity, EntityId, Status};
+use serde::{Deserialize, Serialize};
+use std::time::SystemTime;
+
+/// Output DTO for entity queries.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EntityDto {
+    pub id: String,
+    pub name: String,
+    pub status: String,
+    pub created_at: u64, // Unix timestamp for portability
+    pub updated_at: u64,
+    pub metadata: serde_json::Value,
+}
+
+impl From<Entity> for EntityDto {
+    fn from(e: Entity) -> Self {
+        Self {
+            id: e.id.to_string(),
+            name: e.name,
+            status: format!("{:?}", e.status),
+            created_at: e.created_at.duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap_or_default().as_secs(),
+            updated_at: e.updated_at.duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap_or_default().as_secs(),
+            metadata: e.metadata,
+        }
+    }
+}
+
+/// Input for creating entities.
+#[derive(Debug, Clone, Deserialize)]
+pub struct CreateEntityInput {
+    pub name: String,
+    pub metadata: Option<serde_json::Value>,
+}

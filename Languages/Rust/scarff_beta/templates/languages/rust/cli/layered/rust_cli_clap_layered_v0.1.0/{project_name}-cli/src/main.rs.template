@@ -1,0 +1,218 @@
+use clap::{Parser, Subcommand, ValueEnum};
+use miette::{Context, IntoDiagnostic, Result};
+use scarff_core::application::{
+    ArchiveEntity, Context as AppContext, CreateEntity, GetEntity, ListEntities, UseCase,
+};
+use scarff_core::domain::InMemoryRepository;
+use scarff_infrastructure::{cli::OutputFormatter, persistence::SqliteRepository, AppConfig};
+use std::sync::Arc;
+use tracing::{info, Level};
+
+#[derive(Parser)]
+#[command(
+    name = "scarff",
+    about = "A production-ready CLI tool template",
+    version,
+    author,
+    arg_required_else_help = true
+)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+
+    /// Configuration file path
+    #[arg(short, long, global = true)]
+    config: Option<String>,
+
+    /// Log level (trace, debug, info, warn, error)
+    #[arg(short, long, global = true, default_value = "info")]
+    log_level: String,
+
+    /// Disable colored output
+    #[arg(long, global = true)]
+    no_color: bool,
+
+    /// Use in-memory storage instead of SQLite
+    #[arg(long, global = true)]
+    memory: bool,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Create a new entity
+    Create {
+        /// Entity name
+        name: String,
+
+        /// Optional metadata as JSON
+        #[arg(short, long)]
+        metadata: Option<String>,
+    },
+
+    /// List all entities
+    List {
+        /// Output format
+        #[arg(short, long, value_enum, default_value = "table")]
+        format: OutputFormat,
+    },
+
+    /// Get a specific entity
+    Get {
+        /// Entity ID (UUID)
+        id: String,
+    },
+
+    /// Archive an entity
+    Archive {
+        /// Entity ID (UUID)
+        id: String,
+    },
+
+    /// Generate shell completions
+    Completions {
+        /// Shell to generate completions for
+        shell: clap_complete::Shell,
+    },
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+enum OutputFormat {
+    /// Human-readable table
+    Table,
+    /// JSON output
+    Json,
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let cli = Cli::parse();
+
+    // Initialize tracing
+    let subscriber = tracing_subscriber::fmt()
+        .with_max_level(parse_log_level(&cli.log_level))
+        .with_target(false)
+        .with_thread_ids(false)
+        .with_file(false)
+        .with_line_number(false)
+        .finish();
+
+    tracing::subscriber::set_global_default(subscriber)
+        .into_diagnostic()
+        .wrap_err("Failed to set tracing subscriber")?;
+
+    // Load configuration
+    let config = if let Some(config_path) = cli.config {
+        std::env::set_var("SCARFF_CONFIG", config_path);
+        AppConfig::load()
+            .into_diagnostic()
+            .wrap_err("Failed to load configuration")?
+    } else {
+        AppConfig::load()
+            .into_diagnostic()
+            .wrap_err("Failed to load configuration")?
+    };
+
+    info!("Starting scarff CLI");
+
+    // Setup repository
+    let repository: Arc<dyn scarff_core::domain::Repository> = if cli.memory {
+        info!("Using in-memory repository");
+        Arc::new(InMemoryRepository::new())
+    } else {
+        let db_path = config.database_path();
+        info!("Using SQLite repository at {:?}", db_path);
+        let db_url = format!("sqlite://{}?mode=rwc", db_path.display());
+        Arc::new(
+            SqliteRepository::new(&db_url)
+                .await
+                .into_diagnostic()
+                .wrap_err("Failed to connect to database")?,
+        )
+    };
+
+    let app_context = AppContext::new(repository);
+    let output = OutputFormatter::new(!cli.no_color);
+
+    match cli.command {
+        Commands::Create { name, metadata } => {
+            let meta = metadata
+                .map(|m| serde_json::from_str(&m).into_diagnostic())
+                .transpose()?;
+
+            let req = scarff_core::application::dto::CreateEntityRequest {
+                name,
+                metadata: meta,
+            };
+
+            let dto = CreateEntity
+                .execute(&app_context, req)
+                .await
+                .into_diagnostic()?;
+
+            output.success("Entity created successfully");
+            output.print_entity(&dto);
+        }
+
+        Commands::List { format } => {
+            let entities = ListEntities.execute(&app_context, ()).await.into_diagnostic()?;
+
+            match format {
+                OutputFormat::Table => {
+                    output.print_entity_list(&entities);
+                }
+                OutputFormat::Json => {
+                    println!(
+                        "{}",
+                        serde_json::to_string_pretty(&entities).into_diagnostic()?
+                    );
+                }
+            }
+        }
+
+        Commands::Get { id } => {
+            let uuid = parse_uuid(&id)?;
+            let dto = GetEntity
+                .execute(&app_context, uuid)
+                .await
+                .into_diagnostic()?;
+
+            output.print_entity(&dto);
+        }
+
+        Commands::Archive { id } => {
+            let uuid = parse_uuid(&id)?;
+            let dto = ArchiveEntity
+                .execute(&app_context, uuid)
+                .await
+                .into_diagnostic()?;
+
+            output.success("Entity archived successfully");
+            output.print_entity(&dto);
+        }
+
+        Commands::Completions { shell } => {
+            let mut cmd = Cli::command();
+            let name = cmd.get_name().to_string();
+            clap_complete::generate(shell, &mut cmd, name, &mut std::io::stdout());
+        }
+    }
+
+    Ok(())
+}
+
+fn parse_log_level(level: &str) -> Level {
+    match level.to_lowercase().as_str() {
+        "trace" => Level::TRACE,
+        "debug" => Level::DEBUG,
+        "info" => Level::INFO,
+        "warn" => Level::WARN,
+        "error" => Level::ERROR,
+        _ => Level::INFO,
+    }
+}
+
+fn parse_uuid(s: &str) -> Result<uuid::Uuid> {
+    uuid::Uuid::parse_str(s)
+        .into_diagnostic()
+        .wrap_err_with(|| format!("Invalid UUID format: {}", s))
+}

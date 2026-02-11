@@ -1,0 +1,11 @@
+//! Infrastructure layer: concrete implementations of domain traits.
+//!
+//! Contains all I/O, external API calls, database access, and CLI output.
+//! Depends on core, implements its traits.
+
+pub mod persistence;
+pub mod config;
+pub mod cli;
+
+pub use persistence::SqliteRepository;
+pub use config::AppConfig;

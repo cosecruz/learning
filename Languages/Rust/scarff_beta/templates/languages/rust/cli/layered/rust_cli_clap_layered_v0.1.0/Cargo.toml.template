@@ -1,0 +1,63 @@
+[workspace]
+members = ["scarff-cli", "scarff-core", "scarff-infrastructure", "scarff-macros"]
+resolver = "3"  # 2026: resolver = "3" is default for Edition 2024
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"  # Latest stable (Rust 1.85+)
+rust-version = "1.85"  # MSRV
+authors = ["Your Name <you@example.com>"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/yourusername/scarff"
+homepage = "https://github.com/yourusername/scarff"
+
+[workspace.dependencies]
+# Core async runtime
+tokio = { version = "1.43", features = ["full", "tracing"] }
+
+# CLI & UX
+clap = { version = "4.5", features = ["derive", "env", "cargo", "wrap_help"] }
+clap_complete = "4.5"  # Shell completions
+indicatif = "0.17"     # Progress bars
+console = "0.15"       # Terminal colors/styles
+dialoguer = "0.11"     # Interactive prompts
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+
+# Error handling
+thiserror = "2.0"
+anyhow = "1.0"
+miette = { version = "7.5", features = ["fancy"] }  # Rich error diagnostics
+
+# Testing
+mockall = "0.13"
+tempfile = "3.16"
+assert_cmd = "2.0"
+predicates = "3.1"
+
+# Utilities
+dirs = "6.0"           # XDG directories
+config = "0.15"        # Configuration management
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.13", features = ["v4", "serde"] }
+
+[profile.release]
+opt-level = 3
+lto = "thin"           # Faster builds than fat LTO, good performance
+codegen-units = 1
+strip = true           # Strip symbols for smaller binaries
+panic = "abort"        # Smaller binary, no unwinding
+
+[profile.dev]
+opt-level = 0
+debug = true
+
+# Fast test builds
+[profile.test]
+opt-level = 2
+debug = true

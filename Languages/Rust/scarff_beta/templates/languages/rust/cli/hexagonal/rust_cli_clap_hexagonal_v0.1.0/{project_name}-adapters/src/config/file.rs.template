@@ -1,0 +1,68 @@
+use async_trait::async_trait;
+use config::{Config, Environment, File};
+use scarff_core::domain::DomainError;
+use scarff_core::ports::driven::ConfigProvider;
+use std::collections::HashMap;
+use std::path::PathBuf;
+
+/// File-based configuration adapter.
+pub struct FileConfigProvider {
+    config: Config,
+}
+
+impl FileConfigProvider {
+    pub fn new() -> Result<Self, config::ConfigError> {
+        let mut builder = Config::builder()
+            .set_default("app_name", "scarff")?
+            .set_default("log_level", "info")?
+            .set_default("color", true)?;
+
+        // User config
+        if let Some(config_dir) = dirs::config_dir() {
+            let user_config = config_dir.join("scarff").join("config.toml");
+            builder = builder.add_source(File::from(user_config).required(false));
+        }
+
+        // Local config
+        builder = builder.add_source(File::with_name("scarff").required(false));
+
+        // Environment
+        builder = builder.add_source(Environment::with_prefix("SCARFF").separator("_"));
+
+        Ok(Self {
+            config: builder.build()?,
+        })
+    }
+}
+
+#[async_trait]
+impl ConfigProvider for FileConfigProvider {
+    async fn get(&self, key: &str) -> Result<Option<String>, DomainError> {
+        match self.config.get_string(key) {
+            Ok(v) => Ok(Some(v)),
+            Err(_) => Ok(None),
+        }
+    }
+
+    async fn get_all(&self) -> Result<HashMap<String, String>, DomainError> {
+        // Simplified - in production, iterate all keys
+        Ok(HashMap::new())
+    }
+
+    async fn data_dir(&self) -> Result<PathBuf, DomainError> {
+        let path = self.config.get_string("data_dir")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| {
+                dirs::data_dir()
+                    .unwrap_or_else(|| PathBuf::from("."))
+                    .join("scarff")
+            });
+
+        // Ensure exists
+        if let Err(e) = tokio::fs::create_dir_all(&path).await {
+            return Err(DomainError::BusinessRule(format!("Cannot create data dir: {}", e)));
+        }
+
+        Ok(path)
+    }
+}

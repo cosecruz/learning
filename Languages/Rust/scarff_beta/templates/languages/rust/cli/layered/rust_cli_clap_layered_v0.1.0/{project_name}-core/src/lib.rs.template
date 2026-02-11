@@ -1,0 +1,11 @@
+//! Core business logic: domain entities and application use cases.
+//!
+//! This crate is pure business logic with no external dependencies on
+//! I/O, CLI frameworks, or infrastructure concerns.
+
+pub mod domain;
+pub mod application;
+
+// Re-export commonly used types
+pub use domain::{Entity, Repository, Error as DomainError};
+pub use application::{UseCase, Context};

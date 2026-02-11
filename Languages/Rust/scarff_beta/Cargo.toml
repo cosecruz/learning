@@ -1,13 +1,12 @@
 [workspace]
 members = ["crates/core", "crates/cli"]
-resolver = "2"
+resolver = "3"
 
 [workspace.package]
-name = "scarff"
 version = "0.1.0"
 edition = "2024"
 authors = ["Obiechi Ebuka Samuel oesisu@outlook.com"]
-rust-version = "1.75"
+rust-version = "1.85"
 description = "Project scaffolding made instant - CLI tool"
 documentation = "https://docs.rs/scarff"
 repository = "https://github.com/cosecruz/scarff"
@@ -26,13 +25,19 @@ tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
 
 [profile.release]
 opt-level = 3
-lto = "fat"       #full link time optimization for performance
+# lto = "fat"       #full link time optimization for performance
+lto = "thin"      # Faster builds than fat LTO, good performance
 codegen-units = 1 # better optimization at the cost of compile time;
 panic = "abort"
 strip = true
 
 [profile.dev]
 opt-level = 0
+debug = true
+
+# Fast test builds
+[profile.test]
+opt-level = 2
 debug = true
 
 # Profile for faster development iterations

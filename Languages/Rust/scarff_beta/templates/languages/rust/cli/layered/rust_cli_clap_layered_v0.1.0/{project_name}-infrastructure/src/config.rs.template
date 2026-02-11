@@ -1,0 +1,75 @@
+use config::{Config, ConfigError, Environment, File};
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
+
+/// Application configuration with sensible defaults.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AppConfig {
+    /// Application name
+    pub app_name: String,
+    /// Data directory for persistence
+    pub data_dir: PathBuf,
+    /// Log level (trace, debug, info, warn, error)
+    pub log_level: String,
+    /// Whether to use colors in terminal output
+    pub color: bool,
+}
+
+impl Default for AppConfig {
+    fn default() -> Self {
+        let data_dir = dirs::data_dir()
+            .unwrap_or_else(|| PathBuf::from("."))
+            .join("scarff");
+
+        Self {
+            app_name: "scarff".to_string(),
+            data_dir,
+            log_level: "info".to_string(),
+            color: true,
+        }
+    }
+}
+
+impl AppConfig {
+    /// Load configuration from files and environment.
+    ///
+    /// Precedence (high to low):
+    /// 1. Environment variables (SCARFF_*)
+    /// 2. Local config file (./scarff.toml)
+    /// 3. User config file (~/.config/scarff/config.toml)
+    /// 4. Default values
+    pub fn load() -> Result<Self, ConfigError> {
+        let mut builder = Config::builder()
+            .set_default("app_name", "scarff")?
+            .set_default("log_level", "info")?
+            .set_default("color", true)?;
+
+        // User config
+        if let Some(config_dir) = dirs::config_dir() {
+            let user_config = config_dir.join("scarff").join("config.toml");
+            builder = builder.add_source(File::from(user_config).required(false));
+        }
+
+        // Local config (project-specific)
+        builder = builder.add_source(File::with_name("scarff").required(false));
+
+        // Environment variables
+        builder = builder.add_source(Environment::with_prefix("SCARFF").separator("_"));
+
+        let config = builder.build()?;
+        let mut app_config: AppConfig = config.try_deserialize()?;
+
+        // Ensure data directory exists
+        if let Err(e) = std::fs::create_dir_all(&app_config.data_dir) {
+            eprintln!("Warning: Could not create data directory: {}", e);
+            // Fall back to current directory
+            app_config.data_dir = PathBuf::from(".scarff");
+        }
+
+        Ok(app_config)
+    }
+
+    pub fn database_path(&self) -> PathBuf {
+        self.data_dir.join("scarff.db")
+    }
+}

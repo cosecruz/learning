@@ -1,0 +1,41 @@
+[package]
+name = "{{PROJECT_NAME_KEBAB}}"
+version = "0.1.0"
+edition = "2021"
+authors = ["{{AUTHOR}} <your.email@example.com>"]
+  description = "A production-ready Rust CLI application"
+
+  [dependencies]
+  # CLI argument parsing
+  clap = { version = "4.5", features = ["derive", "env"] }
+
+  # Error handling
+  anyhow = "1.0"
+  thiserror = "1.0"
+
+  # Logging and tracing
+  tracing = "0.1"
+  tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "ansi"] }
+
+  # Serialization
+  serde = { version = "1.0", features = ["derive"] }
+  serde_json = "1.0"
+
+  # Configuration
+  config = "0.14"
+
+  [dev-dependencies]
+  # CLI testing
+  assert_cmd = "2.0"
+  predicates = "3.1"
+  tempfile = "3.13"
+
+  [[bin]]
+  name = "{{PROJECT_NAME_KEBAB}}"
+  path = "src/main.rs"
+
+  [profile.release]
+  opt-level = 3
+  lto = true
+  codegen-units = 1
+  strip = true

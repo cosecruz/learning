@@ -1,0 +1,42 @@
+//! {{PROJECT_NAME_PASCAL}} - Main Entry Point
+
+use anyhow::Result;
+use clap::Parser;
+use tracing::info;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+
+mod cli;
+mod application;
+mod domain;
+mod infrastructure;
+
+use cli::{Cli, Commands};
+
+fn main() -> Result<()> {
+  // Initialize tracing
+  tracing_subscriber::registry()
+  .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
+  .with(tracing_subscriber::fmt::layer())
+  .init();
+
+  info!("Starting {{PROJECT_NAME_PASCAL}}");
+
+  // Parse CLI arguments
+  let cli = Cli::parse();
+
+  // Execute command
+  match cli.command {
+  Commands::Run { input } => {
+  info!("Running with input: {:?}", input);
+  application::run(&input)?;
+  }
+  Commands::Process { file, verbose } => {
+  if verbose {
+  info!("Processing file: {:?}", file);
+  }
+  application::process(&file)?;
+  }
+  }
+
+  Ok(())
+  }

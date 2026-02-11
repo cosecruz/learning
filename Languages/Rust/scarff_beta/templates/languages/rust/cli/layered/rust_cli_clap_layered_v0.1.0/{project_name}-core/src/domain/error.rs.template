@@ -1,0 +1,26 @@
+use thiserror::Error;
+
+/// Domain-level errors — business logic failures, not I/O or infrastructure.
+#[derive(Error, Debug, Clone, PartialEq)]
+pub enum Error {
+    #[error("validation failed: {0}")]
+    Validation(String),
+
+    #[error("entity not found: {id}")]
+    NotFound { id: String },
+
+    #[error("duplicate entity: {id}")]
+    Duplicate { id: String },
+
+    #[error("business rule violated: {rule}")]
+    BusinessRule { rule: String },
+
+    #[error("invalid state transition from {from} to {to}")]
+    InvalidState { from: String, to: String },
+}
+
+impl Error {
+    pub fn validation<S: Into<String>>(msg: S) -> Self {
+        Self::Validation(msg.into())
+    }
+}

@@ -1,0 +1,27 @@
+//! Application Core (Hexagonal Architecture)
+//!
+//! Contains:
+//! - Domain: Entities and business rules (no external deps)
+//! - Application: Use cases and orchestration
+//! - Ports: Interfaces for adapters (driving and driven)
+//!
+//! This crate has ZERO dependencies on:
+//! - I/O (file system, network, console)
+//! - Frameworks (CLI parsers, web servers)
+//! - Infrastructure (databases, external APIs)
+//!
+//! All dependencies point inward to this core.
+
+pub mod application;
+pub mod domain;
+pub mod ports;
+
+// Re-export commonly used types
+pub use application::{
+    ArchiveEntityUseCase, CreateEntityUseCase, GetEntityUseCase, ListEntitiesUseCase,
+};
+pub use domain::{DomainError, Entity, EntityId, Status};
+pub use ports::{
+    driven::{ConfigProvider, EntityRepository, Notifier},
+    driving::EntityOperations,
+};

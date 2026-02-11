@@ -1,0 +1,153 @@
+use async_trait::async_trait;
+use scarff_core::domain::{DomainError, Entity, EntityId, Status};
+use scarff_core::ports::driven::EntityRepository;
+use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite, Row};
+use std::str::FromStr;
+use tracing::{info, instrument};
+
+/// SQLite adapter implementing the EntityRepository port.
+pub struct SqliteRepository {
+    pool: Pool<Sqlite>,
+}
+
+impl SqliteRepository {
+    pub async fn new(database_url: &str) -> Result<Self, sqlx::Error> {
+        info!("Connecting to SQLite: {}", database_url);
+
+        let pool = SqlitePoolOptions::new()
+            .max_connections(5)
+            .connect(database_url)
+            .await?;
+
+        sqlx::migrate!("./migrations")
+            .run(&pool)
+            .await?;
+
+        Ok(Self { pool })
+    }
+
+    pub async fn close(&self) {
+        self.pool.close().await;
+    }
+
+    fn map_row(row: &sqlx::sqlite::SqliteRow) -> Result<Entity, DomainError> {
+        let id_str: String = row.try_get("id")
+            .map_err(|e| DomainError::BusinessRule(format!("DB error: {}", e)))?;
+        let id = EntityId::parse(&id_str)?;
+
+        let status_str: String = row.try_get("status")
+            .map_err(|e| DomainError::BusinessRule(format!("DB error: {}", e)))?;
+        let status = match status_str.as_str() {
+            "Draft" => Status::Draft,
+            "Active" => Status::Active,
+            "Archived" => Status::Archived,
+            _ => Status::Draft,
+        };
+
+        let metadata_str: String = row.try_get("metadata")
+            .map_err(|e| DomainError::BusinessRule(format!("DB error: {}", e)))?;
+        let metadata = serde_json::from_str(&metadata_str)
+            .map_err(|e| DomainError::BusinessRule(format!("JSON error: {}", e)))?;
+
+        Ok(Entity {
+            id,
+            name: row.try_get("name")
+                .map_err(|e| DomainError::BusinessRule(format!("DB error: {}", e)))?,
+            status,
+            created_at: std::time::SystemTime::UNIX_EPOCH +
+                std::time::Duration::from_secs(
+                    row.try_get::<i64, _>("created_at")
+                        .map_err(|e| DomainError::BusinessRule(format!("DB error: {}", e)))? as u64
+                ),
+            updated_at: std::time::SystemTime::UNIX_EPOCH +
+                std::time::Duration::from_secs(
+                    row.try_get::<i64, _>("updated_at")
+                        .map_err(|e| DomainError::BusinessRule(format!("DB error: {}", e)))? as u64
+                ),
+            metadata,
+        })
+    }
+}
+
+#[async_trait]
+impl EntityRepository for SqliteRepository {
+    #[instrument(skip(self))]
+    async fn find_by_id(&self, id: EntityId) -> Result<Option<Entity>, DomainError> {
+        let row = sqlx::query(
+            "SELECT id, name, status, created_at, updated_at, metadata FROM entities WHERE id = ?"
+        )
+        .bind(id.to_string())
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| DomainError::BusinessRule(format!("Database error: {}", e)))?;
+
+        match row {
+            Some(r) => Ok(Some(Self::map_row(&r)?)),
+            None => Ok(None),
+        }
+    }
+
+    #[instrument(skip(self))]
+    async fn find_all(&self) -> Result<Vec<Entity>, DomainError> {
+        let rows = sqlx::query(
+            "SELECT id, name, status, created_at, updated_at, metadata FROM entities ORDER BY created_at DESC"
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| DomainError::BusinessRule(format!("Database error: {}", e)))?;
+
+        rows.iter().map(|r| Self::map_row(r)).collect()
+    }
+
+    #[instrument(skip(self, entity))]
+    async fn save(&self, entity: &Entity) -> Result<(), DomainError> {
+        let created_secs = entity.created_at.duration_since(std::time::SystemTime::UNIX_EPOCH)
+            .unwrap_or_default().as_secs() as i64;
+        let updated_secs = entity.updated_at.duration_since(std::time::SystemTime::UNIX_EPOCH)
+            .unwrap_or_default().as_secs() as i64;
+
+        sqlx::query(
+            r#"
+            INSERT INTO entities (id, name, status, created_at, updated_at, metadata)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+            ON CONFLICT(id) DO UPDATE SET
+                name = excluded.name,
+                status = excluded.status,
+                updated_at = excluded.updated_at,
+                metadata = excluded.metadata
+            "#
+        )
+        .bind(entity.id.to_string())
+        .bind(&entity.name)
+        .bind(format!("{:?}", entity.status))
+        .bind(created_secs)
+        .bind(updated_secs)
+        .bind(entity.metadata.to_string())
+        .execute(&self.pool)
+        .await
+        .map_err(|e| DomainError::BusinessRule(format!("Database error: {}", e)))?;
+
+        Ok(())
+    }
+
+    #[instrument(skip(self))]
+    async fn delete(&self, id: EntityId) -> Result<(), DomainError> {
+        sqlx::query("DELETE FROM entities WHERE id = ?")
+            .bind(id.to_string())
+            .execute(&self.pool)
+            .await
+            .map_err(|e| DomainError::BusinessRule(format!("Database error: {}", e)))?;
+
+        Ok(())
+    }
+
+    async fn exists(&self, id: EntityId) -> Result<bool, DomainError> {
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM entities WHERE id = ?")
+            .bind(id.to_string())
+            .fetch_one(&self.pool)
+            .await
+            .map_err(|e| DomainError::BusinessRule(format!("Database error: {}", e)))?;
+
+        Ok(count > 0)
+    }
+}

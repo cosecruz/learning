@@ -1,0 +1,18 @@
+use crate::domain::Repository;
+use std::sync::Arc;
+
+/// Application context holds configured dependencies.
+/// This is essentially your dependency injection container.
+#[derive(Clone)]
+pub struct Context {
+    pub repository: Arc<dyn Repository>,
+    // Add other cross-cutting concerns here:
+    // pub event_bus: Arc<dyn EventBus>,
+    // pub config: Arc<Config>,
+}
+
+impl Context {
+    pub fn new(repository: Arc<dyn Repository>) -> Self {
+        Self { repository }
+    }
+}

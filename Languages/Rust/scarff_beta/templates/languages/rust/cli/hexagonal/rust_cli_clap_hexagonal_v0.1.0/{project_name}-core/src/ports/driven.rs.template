@@ -1,0 +1,97 @@
+//! Driven ports: Interfaces for infrastructure concerns.
+//!
+//! The core defines these traits. Adapters in scarff-adapters implement them.
+//! This is how the core stays pure while still doing I/O.
+
+use crate::domain::{Entity, EntityId, DomainError};
+use async_trait::async_trait;
+use std::collections::HashMap;
+
+/// Repository for entity persistence.
+/// Implemented by SQLite, FileSystem, or InMemory adapters.
+#[async_trait]
+pub trait EntityRepository: Send + Sync {
+    async fn find_by_id(&self, id: EntityId) -> Result<Option<Entity>, DomainError>;
+    async fn find_all(&self) -> Result<Vec<Entity>, DomainError>;
+    async fn save(&self, entity: &Entity) -> Result<(), DomainError>;
+    async fn delete(&self, id: EntityId) -> Result<(), DomainError>;
+    async fn exists(&self, id: EntityId) -> Result<bool, DomainError>;
+}
+
+/// Notification service for user feedback.
+/// Implemented by Console, Logger, or Webhook adapters.
+#[async_trait]
+pub trait Notifier: Send + Sync {
+    async fn success(&self, message: &str);
+    async fn error(&self, message: &str);
+    async fn info(&self, message: &str);
+    async fn progress(&self, message: &str, current: usize, total: usize);
+}
+
+/// Configuration provider.
+/// Implemented by Environment, File, or Default adapters.
+#[async_trait]
+pub trait ConfigProvider: Send + Sync {
+    async fn get(&self, key: &str) -> Result<Option<String>, DomainError>;
+    async fn get_all(&self) -> Result<HashMap<String, String>, DomainError>;
+    async fn data_dir(&self) -> Result<std::path::PathBuf, DomainError>;
+}
+
+/// In-memory implementation for testing (no async needed, but implements trait).
+pub struct InMemoryRepository {
+    storage: std::sync::RwLock<HashMap<EntityId, Entity>>,
+}
+
+impl InMemoryRepository {
+    pub fn new() -> Self {
+        Self {
+            storage: std::sync::RwLock::new(HashMap::new()),
+        }
+    }
+}
+
+impl Default for InMemoryRepository {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[async_trait]
+impl EntityRepository for InMemoryRepository {
+    async fn find_by_id(&self, id: EntityId) -> Result<Option<Entity>, DomainError> {
+        let storage = self.storage.read().map_err(|_| {
+            DomainError::BusinessRule("Lock poisoned".to_string())
+        })?;
+        Ok(storage.get(&id).cloned())
+    }
+
+    async fn find_all(&self) -> Result<Vec<Entity>, DomainError> {
+        let storage = self.storage.read().map_err(|_| {
+            DomainError::BusinessRule("Lock poisoned".to_string())
+        })?;
+        Ok(storage.values().cloned().collect())
+    }
+
+    async fn save(&self, entity: &Entity) -> Result<(), DomainError> {
+        let mut storage = self.storage.write().map_err(|_| {
+            DomainError::BusinessRule("Lock poisoned".to_string())
+        })?;
+        storage.insert(entity.id, entity.clone());
+        Ok(())
+    }
+
+    async fn delete(&self, id: EntityId) -> Result<(), DomainError> {
+        let mut storage = self.storage.write().map_err(|_| {
+            DomainError::BusinessRule("Lock poisoned".to_string())
+        })?;
+        storage.remove(&id);
+        Ok(())
+    }
+
+    async fn exists(&self, id: EntityId) -> Result<bool, DomainError> {
+        let storage = self.storage.read().map_err(|_| {
+            DomainError::BusinessRule("Lock poisoned".to_string())
+        })?;
+        Ok(storage.contains_key(&id))
+    }
+}

@@ -1,0 +1,34 @@
+[project]
+name = "{{PROJECT_NAME_KEBAB}}"
+description = "A Rust CLI application"
+version = "0.1.0"
+created = "{{YEAR}}"
+
+[scarff]
+version = "0.1.0"
+template = "rust-cli-layered@1.0.0"
+
+[target]
+language = "rust"
+kind = "cli"
+framework = null
+architecture = "layered"
+
+[structure]
+entry_points = ["src/main.rs"]
+test_directories = ["tests/"]
+
+[layers]
+cli = ["src/cli/"]
+application = ["src/application/"]
+domain = ["src/domain/"]
+infrastructure = ["src/infrastructure/"]
+
+# Future features*
+# [transform]
+# enabled = true
+# preserve_custom_code = true
+#
+# [runtime]
+# validate_structure = true
+# suggest_migrations = true

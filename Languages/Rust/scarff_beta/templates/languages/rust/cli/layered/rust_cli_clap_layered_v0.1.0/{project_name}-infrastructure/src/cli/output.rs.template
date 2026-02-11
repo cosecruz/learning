@@ -1,0 +1,108 @@
+use console::{style, Term};
+use scarff_core::application::dto::EntityDto;
+use std::io::Write;
+
+/// Handles all CLI output formatting with consistent styling.
+pub struct OutputFormatter {
+    term: Term,
+    use_color: bool,
+}
+
+impl OutputFormatter {
+    pub fn new(use_color: bool) -> Self {
+        Self {
+            term: Term::stdout(),
+            use_color,
+        }
+    }
+
+    pub fn success(&self, msg: &str) {
+        if self.use_color {
+            let _ = self.term.write_line(&format!("{} {}", style("✓").green().bold(), msg));
+        } else {
+            let _ = self.term.write_line(&format!("[OK] {}", msg));
+        }
+    }
+
+    pub fn error(&self, msg: &str) {
+        if self.use_color {
+            let _ = self.term.write_line(&format!("{} {}", style("✗").red().bold(), msg));
+        } else {
+            let _ = self.term.write_line(&format!("[ERR] {}", msg));
+        }
+    }
+
+    pub fn info(&self, msg: &str) {
+        if self.use_color {
+            let _ = self.term.write_line(&format!("{} {}", style("ℹ").blue(), msg));
+        } else {
+            let _ = self.term.write_line(&format!("[INFO] {}", msg));
+        }
+    }
+
+    pub fn print_entity(&self, entity: &EntityDto) {
+        if self.use_color {
+            let _ = self.term.write_line(&format!(
+                "{} {}\n  {} {}\n  {} {}\n  {} {}\n  {} {}",
+                style("ID:").dim(),
+                style(&entity.id).cyan(),
+                style("Name:").dim(),
+                &entity.name,
+                style("Status:").dim(),
+                self.status_style(&entity.status),
+                style("Created:").dim(),
+                entity.created_at.format("%Y-%m-%d %H:%M"),
+                style("Updated:").dim(),
+                entity.updated_at.format("%Y-%m-%d %H:%M")
+            ));
+        } else {
+            let _ = self.term.write_line(&format!(
+                "ID: {}\nName: {}\nStatus: {}\nCreated: {}\nUpdated: {}",
+                entity.id,
+                entity.name,
+                entity.status,
+                entity.created_at.format("%Y-%m-%d %H:%M"),
+                entity.updated_at.format("%Y-%m-%d %H:%M")
+            ));
+        }
+    }
+
+    pub fn print_entity_list(&self, entities: &[EntityDto]) {
+        if entities.is_empty() {
+            self.info("No entities found.");
+            return;
+        }
+
+        self.info(&format!("Found {} entity(ies):", entities.len()));
+
+        for entity in entities {
+            let status = self.status_style(&entity.status);
+            if self.use_color {
+                let _ = self.term.write_line(&format!(
+                    "  {} {} {} {}",
+                    style(&entity.id.to_string()[..8]).dim(),
+                    &entity.name,
+                    style("•").dim(),
+                    status
+                ));
+            } else {
+                let _ = self.term.write_line(&format!(
+                    "  [{}] {} ({})",
+                    &entity.id.to_string()[..8],
+                    entity.name,
+                    entity.status
+                ));
+            }
+        }
+    }
+
+    fn status_style(&self, status: &str) -> console::StyledObject<&str> {
+        match status {
+            "Active" => style(status).green(),
+            "Pending" => style(status).yellow(),
+            "Suspended" => style(status).red(),
+            "Archived" => style(status).dim(),
+            _ => style(status),
+        }
+    }
+}
