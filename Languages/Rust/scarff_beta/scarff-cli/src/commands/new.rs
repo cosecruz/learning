@@ -144,18 +144,18 @@ fn validate_project_name(name: &str) -> CliResult<()> {
     Ok(())
 }
 
-fn build_target(args: &NewArgs, config: &AppConfig) -> CliResult<Target> {
+fn build_target(args: &NewArgs, _config: &AppConfig) -> CliResult<Target> {
     let lang = convert_language(args.language);
-    let kind = convert_kind(args.kind);
-    let arch = convert_architecture(args.architecture);
 
-    let mut builder = Target::builder()
-        .language(lang)
-        .kind(kind)
-        .map_err(|e| CliError::Core(e.into()))?
-        .architecture(arch);
-    // .map_err(|e| CliError::Core(e.into()))?;
+    let mut builder = Target::builder().language(lang);
 
+    // kind
+    if let Some(kind) = args.kind {
+        let k = convert_kind(kind);
+        builder = builder.kind(k).map_err(|e| CliError::Core(e.into()))?;
+    }
+
+    // framework
     if let Some(fw_str) = &args.framework {
         let fw = parse_framework(args.language, fw_str)?;
         builder = builder
@@ -163,7 +163,13 @@ fn build_target(args: &NewArgs, config: &AppConfig) -> CliResult<Target> {
             .map_err(|e| CliError::Core(e.into()))?;
     }
 
-    Ok(builder.build().map_err(|e| CliError::Core(e.into()))?)
+    // architecture
+    if let Some(arch) = args.architecture {
+        let arch = convert_architecture(arch);
+        builder = builder.architecture(arch)
+    }
+
+    builder.build().map_err(|e| CliError::Core(e.into()))
 }
 
 fn convert_language(lang: Language) -> CoreLanguage {
@@ -188,6 +194,7 @@ fn convert_architecture(arch: Architecture) -> CoreArch {
     match arch {
         Architecture::Layered => CoreArch::Layered,
         Architecture::Clean => CoreArch::Clean,
+        // TODO: create for onion on scarff-core
         Architecture::Onion => CoreArch::Clean,
         Architecture::Modular => CoreArch::FeatureModular,
         Architecture::Mvc => CoreArch::Mvc,

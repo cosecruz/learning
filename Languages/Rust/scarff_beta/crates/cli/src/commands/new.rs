@@ -47,6 +47,8 @@ pub fn execute(cmd: NewCommand, verbose: bool, quiet: bool) -> CliResul<()> {
 
     // 4. Check if project already exists
     let project_path = output_dir.join(&project_name);
+    debug!("project path: {}", project_path);
+
     if project_path.exists() && !cmd.force {
         return Err(CliError::ProjectExists {
             path: project_path.display().to_string(),

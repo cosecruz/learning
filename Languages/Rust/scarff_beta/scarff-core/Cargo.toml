@@ -8,8 +8,7 @@ license.workspace = true
 description = "Application core: domain, use cases, and ports"
 
 [dependencies]
-# Only external dependency - necessary for trait objects in async
-async-trait = { workspace = true }
+
 # Everything else is std library
 thiserror.workspace = true
 uuid = { workspace = true }

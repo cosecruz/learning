@@ -127,7 +127,7 @@ pub struct NewArgs {
         value_enum,
         help = "Project type"
     )]
-    pub kind: ProjectKind,
+    pub kind: Option<ProjectKind>,
 
     /// Architecture pattern.
     #[arg(
@@ -137,7 +137,7 @@ pub struct NewArgs {
         value_enum,
         help = "Architecture pattern"
     )]
-    pub architecture: Architecture,
+    pub architecture: Option<Architecture>,
 
     /// Framework (optional).
     #[arg(

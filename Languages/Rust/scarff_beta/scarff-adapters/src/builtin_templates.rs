@@ -27,7 +27,7 @@ fn rust_cli_default() -> Template {
             language: Some(Language::Rust),
             framework: None,
             kind: Some(ProjectKind::Cli),
-            architecture: Some(Architecture::Layered),
+            architecture: None,
         },
         metadata: TemplateMetadata::new("Rust CLI (Default)")
             .version("1.0.0")
