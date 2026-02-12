@@ -31,7 +31,7 @@ clap = { version = "4.5.57", features = [
 ] }
 
 # Core library
-scarff-core = { path = "../core" }
+scarff-core-v1 = { path = "../core" }
 
 # Output formatting
 owo-colors = { version = "4.2.3", features = ["supports-colors"] }

@@ -1,5 +1,5 @@
 [package]
-name = "scarff-core"
+name = "scarff-core-v1"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

@@ -1,5 +1,9 @@
 [workspace]
-members = ["crates/core", "crates/cli"]
+members = [
+  "scarff-core",
+  # "scarff-cli",
+  "scarff-adapters",
+]
 resolver = "3"
 
 [workspace.package]
@@ -16,11 +20,34 @@ categories = ["command-line-utilities", "development-tools"]
 
 
 [workspace.dependencies]
+# Async runtime
+tokio = { version = "1.49.0", features = ["full", "tracing"] }
+async-trait = "0.1.89"
+
+#Error handling
 anyhow = "1.0.101"
 thiserror = "2.0.18"
-uuid = { version = "1.20.0", features = ["v4", "v7"] }
+miette = { version = "7.6.0", features = ["fancy"] }
+
+# Observability
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.9.8"
+
+# Testing
+mockall = "0.14.0"
+assert_cmd = "2.1.2"
+predicates = "3.1.4"
+
+# Utilities
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.20.0", features = ["v4", "serde"] }
+dirs = "6.0"
+config = "0.15.19"
 
 
 [profile.release]
