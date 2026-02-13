@@ -6,6 +6,7 @@
 pub mod builtin_templates;
 pub mod filesystem;
 pub mod renderer;
+pub mod template_loader;
 pub mod template_store;
 
 // Re-export commonly used adapters

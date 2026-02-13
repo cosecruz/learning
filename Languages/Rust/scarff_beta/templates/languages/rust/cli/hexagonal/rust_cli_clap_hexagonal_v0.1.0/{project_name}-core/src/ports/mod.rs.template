@@ -1,7 +1,0 @@
-//! Ports define the contract between core and adapters.
-//!
-//! Driving ports: Core exposes these, adapters call them (CLI, API, etc)
-//! Driven ports: Core calls these, adapters implement them (DB, notifications)
-
-pub mod driving;
-pub mod driven;

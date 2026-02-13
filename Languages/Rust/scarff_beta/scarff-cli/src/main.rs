@@ -43,6 +43,11 @@ mod output;
 
 #[tokio::main]
 async fn main() -> ExitCode {
+    // Load .env before anything else — including tracing init.
+    // Silently ignored if .env doesn't exist (production deployments
+    // use real environment variables, not .env files).
+    let _ = dotenvy::dotenv();
+
     // ── 1. Parse arguments ────────────────────────────────────────────────
     // clap handles --help / --version and exits automatically; errors here
     // are argument-parse failures (exit 2).

@@ -36,7 +36,7 @@ impl InMemoryStore {
 
     /// Load built-in templates.
     pub fn load_builtin(&self) -> ScarffResult<()> {
-        let templates = builtin_templates::all_templates();
+        let templates = builtin_templates::all_templates()?;
 
         for template in templates {
             self.insert(template)?;
@@ -120,7 +120,7 @@ impl TemplateStore for InMemoryStore {
             .map_err(|_| scarff_core::application::ApplicationError::StoreLockError)?;
 
         let id = TemplateId::new(
-            template.metadata.name,
+            template.metadata.name.to_string(),
             template.metadata.version.to_string(),
         );
 
