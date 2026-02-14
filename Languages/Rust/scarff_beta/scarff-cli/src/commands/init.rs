@@ -8,7 +8,7 @@ use crate::{
 };
 
 /// Create a default Scarff configuration file.
-pub async fn execute(
+pub fn execute(
     args: InitArgs,
     _global: GlobalArgs,
     _config: AppConfig,

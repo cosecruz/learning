@@ -17,6 +17,7 @@
 //! - **Rich domain model**: Behavior lives in entities, not services
 //!
 // Public API - what the world sees
+pub mod capabilities;
 pub mod entities;
 pub mod error;
 pub mod value_objects;
@@ -40,8 +41,8 @@ pub use entities::{
 pub use error::{DomainError, ErrorCategory};
 
 pub use value_objects::{
-    Architecture, ArchitecturePattern, Framework, Language, ProjectKind, PythonFramework,
-    RustFramework, TypeScriptFramework,
+    Architecture, Framework, Language, ProjectKind, PythonFramework, RustFramework,
+    TypeScriptFramework,
 };
 
 // Internal only - not re-exported

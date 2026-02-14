@@ -6,7 +6,7 @@ use crate::{
     output::OutputManager,
 };
 
-pub async fn execute(args: ListArgs, _global: GlobalArgs, output: OutputManager) -> CliResult<()> {
+pub fn execute(args: ListArgs, _global: GlobalArgs, output: OutputManager) -> CliResult<()> {
     use scarff_adapters::InMemoryStore;
     use scarff_core::application::TemplateService;
 

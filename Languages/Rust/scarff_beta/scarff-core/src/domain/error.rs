@@ -34,13 +34,21 @@ pub enum DomainError {
     // ========================================================================
     // Compatibility Errors (409-level equivalent)
     // ========================================================================
-    #[error("Language '{language}' does not support project kind '{kind}'")]
-    IncompatibleLanguageKind { language: String, kind: String },
+    #[error("language '{language}' does not support kind '{kind}': {reason}")]
+    IncompatibleLanguageKind {
+        language: String,
+        kind: String,
+        reason: String, // populated from capabilities::validate_language_kind
+    },
 
-    #[error("Framework '{framework}' is not compatible with {context}")]
-    IncompatibleFramework { framework: String, context: String },
+    #[error("framework '{framework}' incompatible with '{context}': {reason}")]
+    IncompatibleFramework {
+        framework: String,
+        context: String,
+        reason: String, // populated from capabilities::validate_framework_compatibility
+    },
 
-    #[error("Architecture '{architecture}' violates constraints: {reason}")]
+    #[error("architecture '{architecture}' invalid: {reason}")]
     InvalidArchitecture {
         architecture: String,
         reason: String,
@@ -73,7 +81,7 @@ impl DomainError {
                 "Check your target configuration".into(),
                 format!("Details: {}", msg),
             ],
-            Self::IncompatibleLanguageKind { language, kind } => vec![
+            Self::IncompatibleLanguageKind { language, kind, reason } => vec![
                 format!("{} projects typically use:", kind),
                 match kind.as_str() {
                     "cli" => "  • Rust, Python, Go".into(),

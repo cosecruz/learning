@@ -70,10 +70,10 @@ impl ScaffoldService {
     ///
     /// This is the main use case - creates a project from a target configuration.
     #[instrument(
-        skip(self, target, output_path),
+        skip_all,
         fields(
             target = %target,
-            project_name = %project_name.as_ref(),
+            project = %project_name.as_ref(),
             output_path = %output_path.as_ref().display()
         )
     )]
@@ -83,10 +83,14 @@ impl ScaffoldService {
         project_name: impl AsRef<str>,
         output_path: impl AsRef<Path>,
     ) -> ScarffResult<()> {
+        info!(
+            "Scaffolding {} {} project",
+            target.language(),
+            target.kind()
+        );
+
         let project_name = project_name.as_ref();
         let output_path = output_path.as_ref();
-
-        info!("Starting scaffold operation");
 
         // 1. Validate target
         validator::validate_target(&target).map_err(|e| ScarffError::Domain(e))?;

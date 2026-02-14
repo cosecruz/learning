@@ -24,10 +24,10 @@
 use std::process::ExitCode;
 
 use clap::Parser;
-use tracing::{debug, info};
+use tracing::{debug, info, instrument};
 
 use crate::{
-    cli::{Cli, Commands},
+    cli::{Cli, Commands, GlobalArgs},
     config::AppConfig,
     error::{CliError, CliResult},
     logging::init_logging,
@@ -41,8 +41,7 @@ mod error;
 mod logging;
 mod output;
 
-#[tokio::main]
-async fn main() -> ExitCode {
+fn main() -> ExitCode {
     // Load .env before anything else — including tracing init.
     // Silently ignored if .env doesn't exist (production deployments
     // use real environment variables, not .env files).
@@ -86,7 +85,7 @@ async fn main() -> ExitCode {
     let output = OutputManager::new(&cli.global, &config);
 
     // ── 5. Dispatch + 6. Error handling ──────────────────────────────────
-    match run(cli, config, output).await {
+    match run(cli, config, output) {
         Ok(()) => {
             info!("Scarff completed successfully");
             ExitCode::SUCCESS
@@ -96,11 +95,12 @@ async fn main() -> ExitCode {
 }
 
 /// Dispatch to the correct command handler.
-async fn run(cli: Cli, config: AppConfig, output: OutputManager) -> CliResult<()> {
+#[instrument(skip_all)]
+fn run(cli: Cli, config: AppConfig, output: OutputManager) -> CliResult<()> {
     match cli.command {
-        Commands::New(cmd) => commands::new::execute(cmd, cli.global, config, output).await,
-        Commands::List(cmd) => commands::list::execute(cmd, cli.global, output).await,
-        Commands::Init(cmd) => commands::init::execute(cmd, cli.global, config, output).await,
+        Commands::New(cmd) => commands::new::execute(cmd, cli.global, config, output),
+        Commands::List(cmd) => commands::list::execute(cmd, cli.global, output),
+        Commands::Init(cmd) => commands::init::execute(cmd, cli.global, config, output),
         Commands::Completions(cmd) => commands::completions::execute(cmd),
         Commands::Config(cmd) => commands::config::execute(cmd, config, output),
     }

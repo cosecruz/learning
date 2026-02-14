@@ -306,6 +306,7 @@ pub enum Language {
     /// Also accepted as `ts`.
     #[value(alias = "ts")]
     TypeScript,
+    Go,
 }
 
 impl std::fmt::Display for Language {
@@ -314,6 +315,7 @@ impl std::fmt::Display for Language {
             Self::Rust => write!(f, "rust"),
             Self::Python => write!(f, "python"),
             Self::TypeScript => write!(f, "typescript"),
+            Self::Go => write!(f, "golang"),
         }
     }
 }

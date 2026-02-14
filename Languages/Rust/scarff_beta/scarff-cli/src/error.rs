@@ -61,8 +61,13 @@ pub enum CliError {
     UnsupportedArchitecture { architecture: String },
 
     /// Framework not available for language.
-    #[error("Framework '{framework}' is not available for {language}")]
-    FrameworkNotAvailable { framework: String, language: String },
+    #[error("framework '{framework}' is not available for {language}")]
+    FrameworkNotAvailable {
+        framework: String,
+        language: String,
+        // NEW: populated from FRAMEWORK_REGISTRY in parse_framework()
+        available: Vec<&'static str>,
+    },
 
     // ── Config errors ──────────────────────────────────────────────────────
     /// A configuration file could not be read, parsed, or written.
@@ -178,6 +183,7 @@ impl CliError {
             Self::FrameworkNotAvailable {
                 framework,
                 language,
+                available,
             } => {
                 let available = match language.as_str() {
                     "rust" => vec!["axum", "actix-web", "rocket"],
@@ -462,6 +468,7 @@ mod tests {
         let err = CliError::FrameworkNotAvailable {
             framework: "django".into(),
             language: "rust".into(),
+            available: todo!(),
         };
         let suggestions = err.suggestions();
         assert!(suggestions.iter().any(|s| s.contains("axum")));
