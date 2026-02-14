@@ -43,6 +43,7 @@ pub async fn execute(
 
     // 2. Build target
     let target = build_target(&args, &config)?;
+    info!(target = ?target );
 
     // 3. Show configuration
     if !global.quiet && !args.yes {
@@ -149,11 +150,14 @@ fn build_target(args: &NewArgs, _config: &AppConfig) -> CliResult<Target> {
 
     let mut builder = Target::builder().language(lang);
 
+    info!(args = ?args);
+
     // kind
     if let Some(kind) = args.kind {
         let k = convert_kind(kind);
         builder = builder.kind(k).map_err(|e| CliError::Core(e.into()))?;
     }
+    info!(args = ?args);
 
     // framework
     if let Some(fw_str) = &args.framework {
@@ -168,6 +172,7 @@ fn build_target(args: &NewArgs, _config: &AppConfig) -> CliResult<Target> {
         let arch = convert_architecture(arch);
         builder = builder.architecture(arch)
     }
+    info!(args = ?args);
 
     builder.build().map_err(|e| CliError::Core(e.into()))
 }

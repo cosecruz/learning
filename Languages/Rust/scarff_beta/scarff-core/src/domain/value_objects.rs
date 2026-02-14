@@ -113,6 +113,7 @@ impl ProjectKind {
     }
 
     /// Get default project kind for a language.
+    /// and others if available
     pub fn default_for(language: Language) -> Self {
         match language {
             Language::Rust => Self::Cli,

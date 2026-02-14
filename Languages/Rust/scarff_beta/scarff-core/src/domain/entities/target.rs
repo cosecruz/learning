@@ -1,7 +1,10 @@
 use std::fmt;
 use std::marker::PhantomData;
 
+use tracing::info;
+
 use crate::domain::{
+    RustFramework,
     error::DomainError,
     value_objects::{Architecture, Framework, Language, ProjectKind},
 };
@@ -173,9 +176,13 @@ impl TargetBuilder<HasLanguage> {
     }
 
     pub fn build(self) -> Result<Target, DomainError> {
+        info!("in  builder");
         let language = self.language.unwrap();
 
-        // Infer defaults
+        // Infer
+        // if others are provided
+        if let Some(kind) = self.kind {}
+        // defaults if other targets are not provided
         let kind = self
             .kind
             .unwrap_or_else(|| ProjectKind::default_for(language));
@@ -199,5 +206,95 @@ impl TargetBuilder<HasLanguage> {
 
         target.validate()?;
         Ok(target)
+    }
+}
+
+fn infer_kind_from_lang_framework(
+    lang: Language,
+    fw: Framework,
+) -> Result<ProjectKind, DomainError> {
+    use Language::*;
+    use ProjectKind::*;
+
+    match (lang, fw) {
+        // =====================
+        // Rust
+        // =====================
+        (Rust, Framework::Rust(_)) => Ok(WebBackend),
+
+        (Rust, Framework::Python(_)) => Err(DomainError::IncompatibleFramework {
+            framework: "python".into(),
+            context: "python frameworks are not compatible with rust".into(),
+        }),
+        (Rust, Framework::TypeScript(_)) => Err(DomainError::IncompatibleFramework {
+            framework: "typescript".into(),
+            context: "typescript frameworks are not compatible with rust".into(),
+        }),
+        (Rust, Framework::Go(_)) => Err(DomainError::IncompatibleFramework {
+            framework: "go".into(),
+            context: "go frameworks are not compatible with rust".into(),
+        }),
+
+        // =====================
+        // Python
+        // =====================
+        (Python, Framework::Python(_)) => Ok(WebBackend),
+
+        (Python, Framework::Rust(_)) => Err(DomainError::IncompatibleFramework {
+            framework: "rust".into(),
+            context: "rust frameworks are not compatible with python".into(),
+        }),
+        (Python, Framework::TypeScript(_)) => Err(DomainError::IncompatibleFramework {
+            framework: "typescript".into(),
+            context: "typescript frameworks are not compatible with python".into(),
+        }),
+        (Python, Framework::Go(_)) => Err(DomainError::IncompatibleFramework {
+            framework: "go".into(),
+            context: "go frameworks are not compatible with python".into(),
+        }),
+
+        // =====================
+        // TypeScript
+        // =====================
+        (TypeScript, Framework::TypeScript(ts_fw)) => {
+            if ts_fw.is_fullstack() {
+                Ok(Fullstack)
+            } else if ts_fw.is_frontend() {
+                Ok(WebFrontend)
+            } else {
+                Ok(WebBackend)
+            }
+        }
+
+        (TypeScript, Framework::Rust(_)) => Err(DomainError::IncompatibleFramework {
+            framework: "rust".into(),
+            context: "rust frameworks are not compatible with typescript".into(),
+        }),
+        (TypeScript, Framework::Python(_)) => Err(DomainError::IncompatibleFramework {
+            framework: "python".into(),
+            context: "python frameworks are not compatible with typescript".into(),
+        }),
+        (TypeScript, Framework::Go(_)) => Err(DomainError::IncompatibleFramework {
+            framework: "go".into(),
+            context: "go frameworks are not compatible with typescript".into(),
+        }),
+
+        // =====================
+        // Go
+        // =====================
+        (Go, Framework::Go(_)) => Ok(WebBackend),
+
+        (Go, Framework::Rust(_)) => Err(DomainError::IncompatibleFramework {
+            framework: "rust".into(),
+            context: "rust frameworks are not compatible with go".into(),
+        }),
+        (Go, Framework::Python(_)) => Err(DomainError::IncompatibleFramework {
+            framework: "python".into(),
+            context: "python frameworks are not compatible with go".into(),
+        }),
+        (Go, Framework::TypeScript(_)) => Err(DomainError::IncompatibleFramework {
+            framework: "typescript".into(),
+            context: "typescript frameworks are not compatible with go".into(),
+        }),
     }
 }

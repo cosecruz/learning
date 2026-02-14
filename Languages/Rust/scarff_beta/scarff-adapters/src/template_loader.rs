@@ -574,12 +574,12 @@ pub fn parse_framework(s: &str) -> Result<Framework, DomainError> {
 pub fn parse_project_kind(s: &str) -> Result<ProjectKind, DomainError> {
     match s.to_lowercase().as_str() {
         "cli" => Ok(ProjectKind::Cli),
-        "webbackend" => Ok(ProjectKind::WebBackend),
-        "webfrontend" => Ok(ProjectKind::WebFrontend),
+        "webbackend" | "web_api" => Ok(ProjectKind::WebBackend),
+        "webfrontend" | "web_fe" => Ok(ProjectKind::WebFrontend),
         "library" => Ok(ProjectKind::Library),
         "worker" => Ok(ProjectKind::Worker),
         _ => Err(DomainError::InvalidTemplate(format!(
-            "unknown project kind '{s}'; expected one of: cli, webbackend, webfrontend, library"
+            "unknown project kind '{s}'; expected one of: cli, webbackend/web_api, webfrontend/web_fe, library"
         ))),
     }
 }
