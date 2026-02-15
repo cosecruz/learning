@@ -264,10 +264,7 @@ fn show_configuration(
     if let Some(fw) = target.framework() {
         out.print(&format!("  Framework:    {fw}"))?;
     }
-    out.print(&format!(
-        "  Location:     {}",
-        output_dir.join(name).display()
-    ))?;
+    out.print(&format!("  Location:     {}", output_dir.display()))?;
     out.print("")?;
     Ok(())
 }
