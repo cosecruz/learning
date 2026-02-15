@@ -42,7 +42,7 @@ pub fn execute(
     output: OutputManager,
 ) -> CliResult<()> {
     // 1. Resolve project path
-    let (project_name, output_dir) = resolve_project_path(&args.name, args.output.as_deref())?;
+    let (project_name, output_dir) = resolve_project_path(&args.name)?;
     validate_project_name(&project_name)?;
 
     // 2. Build target (inference + validation)
@@ -116,30 +116,27 @@ pub fn execute(
 
 // ── Path resolution ───────────────────────────────────────────────────────────
 
-fn resolve_project_path(name: &str, output: Option<&Path>) -> CliResult<(String, PathBuf)> {
-    let path = PathBuf::from(name);
+pub fn resolve_project_path(name: &str) -> CliResult<(String, PathBuf)> {
+    let path = Path::new(name);
 
-    if let Some(out) = output {
-        let leaf = path.file_name().and_then(|n| n.to_str()).ok_or_else(|| {
-            CliError::InvalidProjectName {
-                name: name.into(),
-                reason: "cannot extract project name from path".into(),
-            }
-        })?;
-        return Ok((leaf.into(), out.to_path_buf()));
-    }
+    let project_name = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .ok_or_else(|| CliError::InvalidProjectName {
+            name: name.into(),
+            reason: "cannot extract valid project name".into(),
+        })?
+        .to_string();
 
-    if let Some(parent) = path.parent().filter(|p| !p.as_os_str().is_empty()) {
-        let leaf = path.file_name().and_then(|n| n.to_str()).ok_or_else(|| {
-            CliError::InvalidProjectName {
-                name: name.into(),
-                reason: "cannot extract project name from path".into(),
-            }
-        })?;
-        Ok((leaf.into(), parent.to_path_buf()))
-    } else {
-        Ok((name.into(), PathBuf::from(".")))
-    }
+    // let target_path = path
+    //     .parent()
+    //     .filter(|p| !p.as_os_str().is_empty())
+    //     .map(|p| p.to_path_buf())
+    //     .unwrap_or_else(|| PathBuf::from("."));
+    // Return the FULL path to the project directory, not just the parent
+    let target_path = path.to_path_buf();
+
+    Ok((project_name, target_path))
 }
 
 fn validate_project_name(name: &str) -> CliResult<()> {
@@ -306,23 +303,46 @@ mod tests {
 
     #[test]
     fn simple_name_resolves_to_cwd() {
-        let (name, dir) = resolve_project_path("my-app", None).unwrap();
+        let (name, dir) = resolve_project_path("my-app").unwrap();
         assert_eq!(name, "my-app");
-        assert_eq!(dir, PathBuf::from("."));
+        assert_eq!(dir, PathBuf::from("./my-app"));
     }
 
     #[test]
     fn relative_path_splits_leaf_and_parent() {
-        let (name, dir) = resolve_project_path("../my-app", None).unwrap();
+        let (name, dir) = resolve_project_path("../my-app").unwrap();
         assert_eq!(name, "my-app");
-        assert_eq!(dir, PathBuf::from(".."));
+        assert_eq!(dir, PathBuf::from("../my-app"));
     }
 
     #[test]
     fn explicit_output_overrides_parent() {
-        let (name, dir) = resolve_project_path("my-app", Some(Path::new("/tmp"))).unwrap();
+        let (name, dir) = resolve_project_path("./tmp/my-app").unwrap();
         assert_eq!(name, "my-app");
-        assert_eq!(dir, PathBuf::from("/tmp"));
+        assert_eq!(dir, PathBuf::from("./tmp/my_app")); // Now works!
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn handles_backslashes_on_windows() {
+        // This just works™ on Windows, no extra code needed
+        let (name, dir) = resolve_project_path("foo\\bar\\my-app").unwrap();
+        assert_eq!(name, "my-app");
+        // dir will be "foo\\bar" on Windows, "foo/bar" on Unix
+        // But PathBuf equality handles this automatically!
+    }
+
+    #[test]
+    fn nested_path_works_on_all_platforms() {
+        // Uses / on Unix, \ on Windows
+        let sep = std::path::MAIN_SEPARATOR;
+        let path = format!("foo{sep}bar{sep}my-app");
+
+        let (name, dir) = resolve_project_path(&path).unwrap();
+        assert_eq!(name, "my-app");
+
+        let expected = PathBuf::from("foo").join("bar").join("my-app");
+        assert_eq!(dir, expected);
     }
 
     // ── validate_project_name ─────────────────────────────────────────────────

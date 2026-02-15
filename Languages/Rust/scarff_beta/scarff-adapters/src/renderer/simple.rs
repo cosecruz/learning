@@ -11,6 +11,7 @@ use scarff_core::{
     },
     error::ScarffResult,
 };
+use tracing::instrument;
 
 /// Simple renderer using basic variable substitution.
 pub struct SimpleRenderer;
@@ -29,6 +30,7 @@ impl Default for SimpleRenderer {
 }
 
 impl TemplateRenderer for SimpleRenderer {
+    #[instrument(skip_all)]
     fn render(
         &self,
         template: &Template,
@@ -36,8 +38,7 @@ impl TemplateRenderer for SimpleRenderer {
         output_root: &Path,
     ) -> ScarffResult<ProjectStructure> {
         // Validate template first
-        validator::validate_template(template)
-            .map_err(|e| scarff_core::error::ScarffError::Domain(e))?;
+        validator::validate_template(template).map_err(scarff_core::error::ScarffError::Domain)?;
 
         let mut structure = ProjectStructure::new(output_root);
 
@@ -56,7 +57,7 @@ impl TemplateRenderer for SimpleRenderer {
 
         // Validate final structure
         validator::validate_project_structure(&structure)
-            .map_err(|e| scarff_core::error::ScarffError::Domain(e))?;
+            .map_err(scarff_core::error::ScarffError::Domain)?;
 
         Ok(structure)
     }

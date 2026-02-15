@@ -148,15 +148,14 @@ pub struct NewArgs {
     )]
     pub framework: Option<String>,
 
-    /// Override the output directory.
-    #[arg(
-        short = 'o',
-        long = "output",
-        value_name = "DIR",
-        help = "Output directory (default: current directory)"
-    )]
-    pub output: Option<PathBuf>,
-
+    // /// Override the output directory.
+    // #[arg(
+    //     short = 'o',
+    //     long = "output",
+    //     value_name = "DIR",
+    //     help = "Output directory (default: current directory)"
+    // )]
+    // pub output: Option<PathBuf>,
     /// Skip the confirmation prompt.
     #[arg(
         short = 'y',

@@ -93,7 +93,7 @@ impl ScaffoldService {
         let output_path = output_path.as_ref();
 
         // 1. Validate target
-        validator::validate_target(&target).map_err(|e| ScarffError::Domain(e))?;
+        validator::validate_target(&target).map_err(ScarffError::Domain)?;
 
         // 2. Resolve template
         let template = self.resolve_template(&target)?;
@@ -101,6 +101,7 @@ impl ScaffoldService {
 
         // 3. Create render context
         let context = RenderContext::new(project_name);
+        // TODO: depending on target.language render project_name to fit norm
 
         // 4. Render template
         let structure = self.renderer.render(&template, &context, output_path)?;
