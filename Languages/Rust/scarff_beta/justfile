@@ -14,6 +14,13 @@ dev *ARGS:
 test:
     cargo test --workspace
 
+test_core:
+    cargo test -p scarff-core
+test_cli:
+    cargo test -p scarff-cli
+test_adapters:
+    cargo test -p scarff-adapters
+
 # Run tests with coverage (requires cargo-tarpaulin)
 coverage:
     cargo tarpaulin --workspace --out Html --out Stdout
